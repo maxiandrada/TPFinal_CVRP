@@ -1338,7 +1338,8 @@ class Solucion(Grafo):
     def evaluar_4opt(self, arista_ini, ind_rutas, ind_A, rutas):
         opcion = 0
         costo_solucion = float("inf")
-        
+        aristaInicial = copy.deepcopy(arista_ini)
+
         DROP = []
         index_DROP = []
 
@@ -1346,6 +1347,7 @@ class Solucion(Grafo):
             return costo_solucion, opcion, DROP, index_DROP
 
         if(ind_rutas[0] != ind_rutas[1]):
+            arista_ini = aristaInicial
             r1 = rutas[ind_rutas[0]]
             r2 = rutas[ind_rutas[1]]
             
@@ -1468,19 +1470,6 @@ class Solucion(Grafo):
                     peso = self._matrizDistancias[V_origen.getValue()-1][V_destino.getValue()-1]
                     A_r2_add2 = Arista(V_origen, V_destino, peso)
 
-                    #if(A_r_add1.getDestino() != A_r_add2.getOrigen()):
-                    #    arista_ini.invertir()            
-
-                    # print("\nA_r1_drop1: "+str(A_r1_drop1))
-                    # print("A_r1_drop2: "+str(A_r1_drop2))
-                    # print("A_r2_drop1: "+str(A_r2_drop1))
-                    # print("A_r2_drop2: "+str(A_r2_drop2))
-                    # print("\nA_r1_add1: "+str(A_r1_add1))
-                    # print("A_r1_add2: "+str(A_r1_add2))
-                    # print("A_r2_add1: "+str(A_r2_add1))
-                    # print("A_r2_add2: "+str(A_r2_add2))
-                    # print("costo r1: ", r1.getCostoAsociado())
-                    # print("costo r2: ", r2.getCostoAsociado())
                 else:
                     #r1: 1,2,3,a,4,5,6        r2: 1,7,8,b,9,10,11,12
                     #r1: 1,2,3,8,4,5,6        r2: 1,7,a,b,9,10,11,12       -> 4ta opcion 

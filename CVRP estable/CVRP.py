@@ -147,7 +147,7 @@ class CVRP:
         cond_Optimiz = True
         cond_Estancamiento = False
 
-        tiempo = time()
+        #tiempo = time()
         Aristas_Opt = np.array([], dtype = object)
         for EP in self._G.getA():
             if(EP.getOrigen().getValue() < EP.getDestino().getValue() and EP.getPeso() <= umbral):
@@ -155,7 +155,7 @@ class CVRP:
                 ind_permitidos = np.append(ind_permitidos, EP.getId())
         Aristas = Aristas_Opt
         ind_AristasOpt = copy.deepcopy(ind_permitidos)
-        print("tiempo get AristasOpt: "+str(time()-tiempo))
+        #print("tiempo get AristasOpt: "+str(time()-tiempo))
         
         self.__optimosLocales.append(nuevas_rutas)
         porcentaje = round(self.__S.getCostoAsociado()/self.__optimo -1.0, 3)
@@ -163,9 +163,9 @@ class CVRP:
         
         while(tiempoEjecuc < tiempoMax and porcentaje*100 > self.__porcentajeParada):
             if(cond_Optimiz):
-                tiempo = time()
+                #tiempo = time()
                 ind_permitidos, Aristas = self.getPermitidos(Aristas, lista_tabu, umbral, solucion_refer, rutas_refer)    #Lista de elementos que no son tabu
-                print("tiempo getPerm: "+str(time()-tiempo))
+                #print("tiempo getPerm: "+str(time()-tiempo))
                 self.__umbralMin = 0
             cond_Optimiz = False
             ADD = []
