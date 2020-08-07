@@ -289,7 +289,7 @@ class CVRP:
                 indOptimosLocales -= 1
                 iteracEstancMax = 100
                 self.__beta = 3
-            elif(iteracEstancamiento > iteracEstancMax and costoSolucion*porc_Estancamiento > nuevo_costo and nuevo_costo < costoSolucion*porc_EstancamientoMax):
+            elif(iteracEstancamiento > iteracEstancMax and costoSolucion*porc_Estancamiento < nuevo_costo and nuevo_costo < costoSolucion*porc_EstancamientoMax):
                 nuevas_rutas = nueva_solucion.swap(k_Opt, aristasADD[0], rutas_refer, indRutas, indAristas)
                 nueva_solucion = self.cargaSolucion(nuevas_rutas)
                 tiempoTotal = time()-tiempoEstancamiento

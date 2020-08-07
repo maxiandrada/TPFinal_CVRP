@@ -1,4 +1,5 @@
 import copy
+
 class camino():
     def __init__(self, s, g, demandas, capacidad):
         self.__demandas = demandas
@@ -162,8 +163,6 @@ class camino():
 #### SECCION DE PRUEBAS ####
 s = [[1,4,5,2],[1,9,8,3],[1,6,7,10]]
 
-
-
 g = [[1,2,3],[1,4,5,6,7],[1,8,9,10]]
 try:
     caminito = camino(s, g, [0.0,2.0,4.0,2.0,5.0,6.0,7.0,6.0,3.0,4.0,7.0], 20)
@@ -176,3 +175,4 @@ try:
     print (str(caminito.iguales()))
 except Exception as e:
     print (e)
+

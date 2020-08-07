@@ -306,6 +306,9 @@ class CVRP:
                 iteracEstancamiento = 1
                 Aristas = Aristas_Opt
                 iteracEstancMax = 300    
+                self.__txt.escribir("\nADD: "+str(aristasADD))
+                self.__txt.escribir("\nDROP: "+str(aristasDROP))
+
             elif(ind_permitidos == []):
                 nuevas_rutas = nueva_solucion.swap(k_Opt, aristasADD[0], rutas_refer, indRutas, indAristas)
                 nueva_solucion = self.cargaSolucion(nuevas_rutas)            
@@ -318,6 +321,8 @@ class CVRP:
                 ind_permitidos = ind_AristasOpt
                 Aristas = Aristas_Opt
                 umbral = self.calculaUmbral(costo)
+                self.__txt.escribir("\nADD: "+str(aristasADD))
+                self.__txt.escribir("\nDROP: "+str(aristasDROP))
             else:
                 nuevas_rutas = rutas_refer
                 nueva_solucion = solucion_refer

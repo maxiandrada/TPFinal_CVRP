@@ -1347,7 +1347,6 @@ class Solucion(Grafo):
             return costo_solucion, opcion, DROP, index_DROP
 
         if(ind_rutas[0] != ind_rutas[1]):
-            arista_ini = aristaInicial
             r1 = rutas[ind_rutas[0]]
             r2 = rutas[ind_rutas[1]]
             
@@ -1366,6 +1365,7 @@ class Solucion(Grafo):
                 return costo_solucion, opcion, [], []
             
             for i in range(1,5):
+                arista_ini = copy.deepcopy(aristaInicial)
                 if((i==2 or i==4) and (0 in ind_A or 1 in ind_A)):
                     continue
                 if((i == 1 or i==3) and (len(r1.getV())-1 == ind_A[0] or len(r2.getV())-1 == ind_A[1]+1)):
@@ -1408,16 +1408,6 @@ class Solucion(Grafo):
                 
                     if(A_r1_add1.getDestino() != A_r1_add2.getOrigen()):
                         arista_ini.invertir()
-                    # print("\nA_r1_drop1: "+str(A_r1_drop1))
-                    # print("A_r1_drop2: "+str(A_r1_drop2))
-                    # print("A_r2_drop1: "+str(A_r2_drop1))
-                    # print("A_r2_drop2: "+str(A_r2_drop2))
-                    # print("\nA_r1_add1: "+str(A_r1_add1))
-                    # print("A_r1_add2: "+str(A_r1_add2))
-                    # print("A_r2_add1: "+str(A_r2_add1))
-                    # print("A_r2_add2: "+str(A_r2_add2))
-                    # print("costo r1: ", r1.getCostoAsociado())
-                    # print("costo r2: ", r2.getCostoAsociado())
                 elif(i == 2):
                     #print("Opcion ", i)
                     #r1: 1,2,3,a,4,5,6        r2: 1,7,8,b,9,10,11,12
@@ -1496,8 +1486,12 @@ class Solucion(Grafo):
                     costo_r2_add1 = self._matrizDistancias[V_origen.getValue()-1][V_destino.getValue()-1]
                     A_r2_add1 = Arista(V_origen, V_destino, costo_r2_add1)
 
-                cap_r1 = r1.getCapacidad() - A_r1_drop1.getDestino().getDemanda() + A_r1_add1.getDestino().getDemanda()
-                cap_r2 = r2.getCapacidad() - A_r2_drop1.getDestino().getDemanda() + A_r2_add1.getDestino().getDemanda()
+                if(i == 3 or i == 4):
+                    cap_r1 = r1.getCapacidad() - A_r1_drop1.getDestino().getDemanda() + A_r2_drop1.getDestino().getDemanda()
+                    cap_r2 = r2.getCapacidad() - A_r2_drop1.getDestino().getDemanda() + A_r1_drop1.getDestino().getDemanda()
+                else:
+                    cap_r1 = r1.getCapacidad() - A_r1_drop1.getDestino().getDemanda() + A_r1_add1.getDestino().getDemanda()
+                    cap_r2 = r2.getCapacidad() - A_r2_drop1.getDestino().getDemanda() + A_r2_add1.getDestino().getDemanda()
                 
                 if(cap_r1 > self.__capacidadMax or cap_r2 > self.__capacidadMax):
                     continue
@@ -1518,6 +1512,13 @@ class Solucion(Grafo):
                     index_DROP.append(A_r1_drop2.getId())
                     index_DROP.append(A_r2_drop1.getId())
                     index_DROP.append(A_r2_drop2.getId())
+                    # if(i == 3 or i == 4):
+                    #     print("capR1: %d        capR2: %d       capacidad en evaluar4opt opcion %d con aristaIni: %s"%(cap_r1, cap_r2, i, str(aristaInicial)))
+                    #     print("ADD: %s          DROP: %s"%(str([A_r1_add1, A_r1_add2, A_r2_add1, A_r2_add2]), str(DROP)))
+                    #     print("A_r1_drop1: %s   demanda destino: %d" %(str(A_r1_drop1), A_r1_drop1.getDestino().getDemanda()))
+                    #     print("A_r2_drop1: %s   demanda destino: %d" %(str(A_r2_drop1), A_r2_drop1.getDestino().getDemanda()))
+                    #     print("A_r1_add1: %s   demanda destino: %d" %(str(A_r1_add1), A_r1_add1.getDestino().getDemanda()))
+                    #     print("A_r2_add1: %s   demanda destino: %d" %(str(A_r2_add1), A_r2_add1.getDestino().getDemanda()))
                 
                 #print("-> Nuevo costo: "+str(nuevo_costo)+"\n\n")
         else:
@@ -1707,8 +1708,8 @@ class Solucion(Grafo):
                 DROP = []
             elif(opcion==3 or opcion == 4):
                 ind_A = copy.copy(ind_A_inicial)
-                r2 = rutas[ind_rutas[0]]
                 r1 = rutas[ind_rutas[1]]
+                r2 = rutas[ind_rutas[0]]
                 ind_A.reverse()
 
                 if(opcion ==4):
@@ -1822,6 +1823,15 @@ class Solucion(Grafo):
             
             r1.setCapacidad(cap_r1)
             r2.setCapacidad(cap_r2)
+
+            if(cap_r1 > self.__capacidadMax or cap_r2 > self.__capacidadMax):
+                print("r1: "+str(r1))
+                print("r2: "+str(r2))
+                print("ADD: "+str(ADD))
+                print("DROP: "+str(DROP))
+                print("Opcion: "+str(opcion))
+                a = 1/0
+
         #4-opt en la misma ruta. Condicion: Deben haber 4 aristas de separacion entre a y b, si no se realiza 2-opt
         else:
             # r: 1,2,3,a,4,5,6,b,7,8  -> Original
