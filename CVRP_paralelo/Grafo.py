@@ -5,21 +5,34 @@ import re
 import math 
 import copy
 import numpy as np
-
+from time import time 
 class Grafo:
-    def __init__(self, M, D):
-        self._V = []
-        self._A = []
-        self._AristasUnicas = []
-        self.__indAristas = np.array([], dtype = int)
-        self._costoAsociado = 0
-        self._grado = len(M)
-        self._matrizDistancias = M
-        self._demanda = D
-        self._demandaAcumulada = []
-        if(M!=[] and D!=[]):
-            self.cargarDesdeMatriz(M, D)
-        
+    def __init__(self, M, D,G=None,vacio=False):
+        if G is None:
+            self._costoAsociado = 0
+            self._V = []
+            self._A = []
+            self._AristasUnicas = []
+            self._grado = len(M)
+            self._matrizDistancias = M
+            self._demanda = D
+            self._demandaAcumulada = []
+            if(M!=[] and D!=[]):
+                self.cargarDesdeMatriz(M, D)
+        else:
+            if vacio:
+                self._V = []
+                self._A = []
+            else:
+                self._V = G.getV()
+                self._A = G.getA()
+            self._AristasUnicas = []
+            self._costoAsociado = 0
+            self._grado = len(M)
+            self._matrizDistancias = M
+            self._demanda = D
+            self._demandaAcumulada = []
+
     def getGrado(self):
         return self._grado
 
@@ -27,6 +40,7 @@ class Grafo:
         return self._demandaAcumulada
     
     def cargarDesdeAristas(self, A):
+        t = time()
         self._A = A
         V = []
         cap = 0
@@ -42,6 +56,7 @@ class Grafo:
             self._demandaAcumulada.append(demAcum)
         self._V = V
         self._costoAsociado = costo
+        print(f"CargaDesdeAristas: {time()-t}")
         return cap
     
     def setDemanda(self, D):
@@ -161,14 +176,19 @@ class Grafo:
         return V
 
     def cargaGrafoDesdeSec(self, secuencia):
-        V = []
-        self._A = []
+        if(len(self._V)!=0):
+            self._V = []
+        else:
+            V = self._V
+        if(len(self._A)!=0):
+            self._A = []
+        if(len(self._demandaAcumulada)!=0):
+            self._demandaAcumulada = []
         costo = 0
         demAcum = 0
-        self._demandaAcumulada = []
         cap = 0
-        
         #for x in secuencia:
+
         for i in range(0, len(secuencia)):
             x = secuencia[i]
             V.append(Vertice(int(x), self._demanda[x-1]))
@@ -186,7 +206,6 @@ class Grafo:
                 self._demandaAcumulada.append(demAcum)
                 costo+=dist
                 cap += Vfila.getDemanda()
-        
         self.setV(V)
         Vfila = V[-1]
         Vcol = V[0]
@@ -272,13 +291,15 @@ class Grafo:
 
     #Para que cargue desde una secuencia de vertices por ej. s1= [1,3,4,5,8,9,6,7] -> s2=[1,3,9,5,8,4,6,7]
     def cargarDesdeSecuenciaDeVertices(self,seq:list):
+        t = time()
         self._V = seq
-        self._A = []
+        if(len(self._A)!=0):
+            self._A = []
+        if(len(self._demandaAcumulada)!=0):
+            self._demandaAcumulada = []
         costo = 0
         demAcum = 0
-        self._demandaAcumulada = []
         cap = 0
-        
         for i in range(0,len(seq)):
             if(i< len(seq)-1):
                 fila = seq[i].getValue()-1
@@ -300,7 +321,7 @@ class Grafo:
             cap += seq[i].getDemanda()
         
         self._costoAsociado = costo
-
+        print(f"CargaDesdeSecuenciaDeVertices: {time()-t}")
         return cap
 
     def incrementaFrecuencia(self):

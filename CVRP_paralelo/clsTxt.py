@@ -25,7 +25,6 @@ class clsTxt:
         i = 0
         while os.path.exists("%s (%i).txt" %(self.__nombre ,i)):
             i += 1
-
         self.__nombre = "%s (%i)" %(self.__nombre,i)
         self.__txt = open(str(self.__nombre)+".txt", "w")
         #self.__ArchivoCSV = open(str(self.__nombre)+".csv", "w",newline="")

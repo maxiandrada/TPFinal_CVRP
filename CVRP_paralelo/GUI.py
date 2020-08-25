@@ -178,8 +178,6 @@ class Ventana(tk.Tk):
         self.__entryPorcentaje[i].configure(state = "normal", textvariable = self.__ePorcentaje[i])
         self.__ePorcentaje[i].set(0.1)
 
-        return
-
     def listToString(self, s): 
         str1 = ""  
         for ele in s:  

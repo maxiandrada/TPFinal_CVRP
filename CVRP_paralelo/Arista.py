@@ -73,3 +73,8 @@ class Arista():
 
     def getSumCapacidad(self):
         return self._origen.getDemanda() + self._destino.getDemanda()
+
+    def __hash__(self):
+        origen = self._origen.getValue()
+        destino = self._destino.getValue()
+        return int(((origen+destino)*(origen+destino+1))/2+destino)
