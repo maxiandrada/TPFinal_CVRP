@@ -154,9 +154,11 @@ def cargarDesdeFile2(pathArchivo):
         return nroVehiculos, optimo, capacidad, matrizDist, demandas
 
 # direccion = "/home/alumno/tpfinal_v2/MPIv3/cvrp/Instancias/Set X/X-n298-k31.vrp"
-direccion = "/home/alumno/tpfinal_v2/MPIv3/cvrp/Instancias/Set M/M-n200-k16.vrp"
+# direccion = "/home/alumno/tpfinal_v2/MPIv3/cvrp/Instancias/Set M/M-n200-k16.vrp"
+# direccion = "/home/alejandro/DA80D3CB80D3AC6F/COSAS SALVADAS/unsa/LAS/Opt - Optimización Concurrente y Paralela/tpFinal/CVRP/ubuntu/TPFinal_CVRP/Instancias/Set X/X-n548-k50.vrp"
+direccion = "/home/alejandro/DA80D3CB80D3AC6F/COSAS SALVADAS/unsa/LAS/Opt - Optimización Concurrente y Paralela/tpFinal/CVRP/ubuntu/TPFinal_CVRP/Instancias/X-n801-k40.vrp"
 
-nombre = "M-n200-k16.vrp"
+nombre = "X-n801-k40.vrp"
 
 nroVehiculos, optimo, capacidad, matrizDist, demandas = cargarDesdeFile2(direccion)
 tenureADD = int(len(matrizDist)**(1/2.0))

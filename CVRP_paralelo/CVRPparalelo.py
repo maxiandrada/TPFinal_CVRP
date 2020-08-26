@@ -15,7 +15,7 @@ import datetime
 from caminoCVRP import camino
 from mpi4py import MPI
 
-class CVRP:
+class CVRPparalelo:
     def __init__(self, M, D, nroV, capac, archivo, carpeta, solI, tADD, tDROP, tiempo, porcentaje, optimo):
         self.__comm = MPI.COMM_WORLD
         self.__tiempoMPI = 0
@@ -102,7 +102,7 @@ class CVRP:
         S.setCostoAsociado(costoTotal)
         S.setCapacidad(cap)
         S.setCapacidadMax(self.__capacidadMax)
-        print(f"cargaSolucion: {time()-t}")
+        # print(f"cargaSolucion: {time()-t}")
         return S
 
 

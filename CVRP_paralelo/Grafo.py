@@ -321,7 +321,7 @@ class Grafo:
             cap += seq[i].getDemanda()
         
         self._costoAsociado = costo
-        print(f"CargaDesdeSecuenciaDeVertices: {time()-t}")
+        # print(f"CargaDesdeSecuenciaDeVertices: {time()-t}")
         return cap
 
     def incrementaFrecuencia(self):
