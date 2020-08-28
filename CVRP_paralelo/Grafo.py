@@ -56,7 +56,7 @@ class Grafo:
             self._demandaAcumulada.append(demAcum)
         self._V = V
         self._costoAsociado = costo
-        print(f"CargaDesdeAristas: {time()-t}")
+        # print(f"CargaDesdeAristas: {time()-t}")
         return cap
     
     def setDemanda(self, D):

@@ -92,7 +92,7 @@ class CVRP:
         S.setCostoAsociado(costoTotal)
         S.setCapacidad(cap)
         S.setCapacidadMax(self.__capacidadMax)
-        print(f"cargaSolucion: {time()-t}")
+        # print(f"cargaSolucion: {time()-t}")
         return S
 
 

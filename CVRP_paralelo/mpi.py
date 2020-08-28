@@ -156,7 +156,8 @@ def cargarDesdeFile2(pathArchivo):
 # direccion = "/home/alumno/tpfinal_v2/MPIv3/cvrp/Instancias/Set X/X-n298-k31.vrp"
 # direccion = "/home/alumno/tpfinal_v2/MPIv3/cvrp/Instancias/Set M/M-n200-k16.vrp"
 # direccion = "/home/alejandro/DA80D3CB80D3AC6F/COSAS SALVADAS/unsa/LAS/Opt - Optimización Concurrente y Paralela/tpFinal/CVRP/ubuntu/TPFinal_CVRP/Instancias/Set X/X-n548-k50.vrp"
-direccion = "/home/alejandro/DA80D3CB80D3AC6F/COSAS SALVADAS/unsa/LAS/Opt - Optimización Concurrente y Paralela/tpFinal/CVRP/ubuntu/TPFinal_CVRP/Instancias/X-n801-k40.vrp"
+# direccion = "/home/alejandro/DA80D3CB80D3AC6F/COSAS SALVADAS/unsa/LAS/Opt - Optimización Concurrente y Paralela/tpFinal/CVRP/ubuntu/TPFinal_CVRP/Instancias/X-n1001-k43.vrp"
+direccion = "/home/alejandro/windows/COSAS SALVADAS/unsa/LAS/Opt - Optimización Concurrente y Paralela/tpFinal/CVRP/ubuntu/TPFinal_CVRP/Instancias/X-n801-k40.vrp"
 
 nombre = "X-n801-k40.vrp"
 
@@ -164,6 +165,4 @@ nroVehiculos, optimo, capacidad, matrizDist, demandas = cargarDesdeFile2(direcci
 tenureADD = int(len(matrizDist)**(1/2.0))
 tenureDROP = int(len(matrizDist)**(1/2.0))+1
 time = 10.0
-print (str(tenureADD))
-print (str(tenureDROP))
 cvrp = CVRPparalelo(matrizDist, demandas, nroVehiculos, capacidad, nombre+"_"+str(time)+"min", 'mpi_', 0, tenureADD, tenureDROP, time, 0.1, optimo)
