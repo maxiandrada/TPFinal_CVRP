@@ -2030,3 +2030,4 @@ class Solucion(Grafo):
         else:
             rutasInfactibles = rutasInfactibles - set({indR1, indR2})
             return rutas, True, rutasInfactibles
+            
