@@ -9,6 +9,8 @@ import os
 from os import listdir
 from os.path import isfile, join
 import ntpath
+import sys
+
 
 def cargarDesdeFile(pathArchivo):
     #+-+-+-+-+-Para cargar la distancias+-+-+-+-+-+-+-+-
@@ -158,12 +160,10 @@ def cargarDesdeFile2(pathArchivo):
                 demandas.append(float(splitLinea[1]))
         return nroVehiculos, optimo, capacidad, matrizDist, demandas     
 
-# direccion = "/home/alumno/tpfinal_v2/MPIv3/cvrp/Instancias/Set M/M-n200-k16.vrp"
-# direccion = "/home/alejandro/DA80D3CB80D3AC6F/COSAS SALVADAS/unsa/LAS/Opt - Optimización Concurrente y Paralela/tpFinal/CVRP/ubuntu/TPFinal_CVRP/Instancias/Set X/X-n548-k50.vrp"
-# direccion = "/home/alejandro/DA80D3CB80D3AC6F/COSAS SALVADAS/unsa/LAS/Opt - Optimización Concurrente y Paralela/tpFinal/CVRP/ubuntu/TPFinal_CVRP/Instancias/X-n1001-k43.vrp"
-direccion = "/home/alejandro/windows/COSAS SALVADAS/unsa/LAS/Opt - Optimización Concurrente y Paralela/tpFinal/CVRP/ubuntu/TPFinal_CVRP/Instancias/Set M/M-n200-k16.vrp"
 
-nombre = "M-n200-k16.vrp"
+direccion = sys.argv[1]  
+
+nombre = "asdfasdf"
 
 nroVehiculos, optimo, capacidad, matrizDist, demandas = cargarDesdeFile2(direccion)
 tenureADD = int(len(matrizDist)**(1/2.0))

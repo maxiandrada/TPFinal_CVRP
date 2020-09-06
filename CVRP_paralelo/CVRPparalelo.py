@@ -160,7 +160,6 @@ class CVRPparalelo:
         solucion_refer = copy.deepcopy(self.__S)
         nueva_solucion = solucion_refer
         nuevo_costo = self.__S.getCostoAsociado()
-        
         #Atributos de tiempo e iteraciones
         tiempoIni = time()
         tiempoMax = float(self.__tiempoMaxEjec*60)
@@ -422,7 +421,6 @@ class CVRPparalelo:
                             umbral = self.calculaUmbral(costo)
                             solucion_refer = nueva_solucion
                             rutas_refer = nuevas_rutas
-                            cond_Optimiz = True
                             # Aristas = Aristas_Opt
                             iteracEstancamiento = 0
                             iteracEstancMax = 5
@@ -431,6 +429,8 @@ class CVRPparalelo:
                         else:
                             contEstanOpt = 0
                             cantPR = 0
+                cond_Optimiz = True
+
 
             #Si se vuelve a estancar a pesar de usar Path Relinking, admitimos la primera nueva solucion
             elif(iteracEstancamiento > iteracEstancMax):
@@ -440,7 +440,7 @@ class CVRPparalelo:
                 print(cad + "-->    Costo: "+str(costo))
                 nuevas_rutas = nueva_solucion.swap(k_Opt, aristasADD[0], rutas_refer, indRutas, indAristas)
                 if(len(self.__optimosLocales) >= 10):
-                        self.__optimosLocales.pop(0)
+                    self.__optimosLocales.pop(0)
                 self.__optimosLocales.append(nuevas_rutas)
                 
                 nueva_solucion = self.cargaSolucion(nuevas_rutas)
@@ -565,22 +565,34 @@ class CVRPparalelo:
         dictA = dict(zip(claves,solucion.getA()))
         
         #No tengo en consideracion a las aristas que exceden el umbral y las que pertencen a S
+
+        #print("Aristas en Solución \n",str(solucion.getA()))
         for EP in Aristas:
             pertS = False
             h = hash(EP)
+            hInverso = hash(EP.getAristaInvertida())
             try:
                 arista = dictA[h]
             except KeyError:
                 arista = None
-                
+
+            try:
+                aristaInv = dictA[hInverso]
+            except KeyError:
+                aristaInv = None 
+
             if arista is not None:
                 pertS = True
                 del dictA[h]
+
+            if aristaInv is not None:
+                pertS = True
+                del dictA[hInverso]
             if(not pertS and self.__umbralMin <= EP.getPeso() and EP.getPeso() <= umbral):
                 AristasNuevas.append(EP)
                 ind_permitidos = np.append(ind_permitidos, EP.getId())
         ind_permitidos = np.unique(ind_permitidos)
-
+        #print("Aristas Nuevas:\n ",str(AristasNuevas))
         return ind_permitidos
 
     #Decrementa el Tenure en caso de que no sea igual a -1. Si luego de decrementar es 0, lo elimino de la lista tabu

@@ -295,7 +295,7 @@ class Ventana(tk.Tk):
                 
                 #Para el primer caso. Calculando la distancia euclidea entre si mismo da 0
                 if(dist == 0 and float(coordRow[0])==float(coordCol[0])):
-                    dist = 999999999999
+                    dist = float("inf")
                 fila.append(dist)
 
             #print("Fila: "+str(fila))    
