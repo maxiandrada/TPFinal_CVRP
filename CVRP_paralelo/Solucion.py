@@ -350,7 +350,7 @@ class Solucion(Grafo):
 
     def swap(self, k_Opt, aristaIni, rutas_orig, indRutas, indAristas):
         rutas = copy.deepcopy(rutas_orig)
-        print(f"SWAP {k_Opt[0]} opción {k_Opt[1]}")
+        # print(f"SWAP {k_Opt[0]} opción {k_Opt[1]}")
         if(k_Opt[0] == 2):
             opcion = k_Opt[1]
             rutas = self.swap_2opt(aristaIni, indRutas, indAristas, rutas, opcion)

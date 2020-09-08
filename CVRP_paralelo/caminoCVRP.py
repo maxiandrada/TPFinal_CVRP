@@ -1,9 +1,11 @@
 import copy
+from Solucion import Solucion
 
 class camino():
-    def __init__(self, s, g, demandas, capacidad):
+    def __init__(self, s, g, demandas, capacidad, matrizDistancias):
         self.__demandas = demandas
         self.__capacidad = capacidad
+        self.__matrizDistancias = matrizDistancias
         if not (self.chequeaFactibilidad(s) and self.chequeaFactibilidad(g)):
             raise Exception("SolucionesInfactibles")
         else:
@@ -11,17 +13,39 @@ class camino():
             self.__g = g
             self.__indS = [0,1] #(ruta, vertice)
             self.__indG = [0,1]
-            self.__cond1 = self.igualesTam()
-            self.__cond2 = self.igualesRec()
+            self.__condMT = self.igualesTam()
+            self.__condMR = self.igualesRec()
+            self.generaCamino()
+
+    def pathRelinking(self):
+        rutas = []
+        for sec in self.__s:
+            S = Solucion(self.__matrizDistancias, self.__demandas, 0)
+            # cap = S.cargarDesdeSecuenciaDeVertices(S.cargaVertices(sec, False))
+            cap = S.cargaGrafoDesdeSec(sec)
+            S.setCapacidad(cap)
+            S.setCapacidadMax(self.__capacidad)
+            rutas.append(S)
+        self.generaCamino()
+        return rutas
+
+    def setSol(self, s, g):
+        if not (self.chequeaFactibilidad(s) and self.chequeaFactibilidad(g)):
+            raise Exception("SolucionesInfactibles")
+        else:
+            self.__s = s
+            self.__g = g
+            self.__indS = [0,1] #(ruta, vertice)
+            self.__indG = [0,1]
+            self.__condMT = self.igualesTam()
+            self.__condMR = self.igualesRec()
+            self.generaCamino()
 
     def chequeaFactibilidad(self, p):
         i = 0
         while i < len(p) and self.__chequeaFactibilidadRuta(p[i]):
             i+=1
         return False if i < len(p) else True
-
-    def getInd(self): #retorna tupla
-        return self.__indS
 
     def igualesTam(self):
         i = 0
@@ -46,23 +70,30 @@ class camino():
         else:
             return False
 
-    def pathRelinking (self):
-        # print ("----inicio pr----")
+    def generaCamino (self):
+        # # print ("----inicio pr----")
         aux1 = -1
         aux2 = -1
         if not self.iguales():
-            if not self.__cond2:
+            if not self.__condMR:
                 aux1 = self.__s[self.__indS[0]][self.__indS[1]]
                 aux2 = self.__g[self.__indG[0]][self.__indG[1]]
+                if self.__s[self.__indS[0]][self.__indS[1]] == self.__g[self.__indG[0]][self.__indG[1]]:
+                    self.__indS=self.incIndS(self.__indS) 
+                    self.__indG=self.incIndG(self.__indG)
+                    self.__condMR = self.igualesRec()
+                    # print ("entro 1")
+                    return self.generaCamino() if self.__indS != None and self.__indG != None else []
                 self.__s[self.__indS[0]][self.__indS[1]] = self.__g[self.__indG[0]][self.__indG[1]]
 
                 indS=self.incIndS(self.__indS) 
                 indG=self.incIndG(self.__indG)
                 if indS!=None and indG!=None:
-                    # print ("Los indices no son None")
+                    # # print ("Los indices no son None")
+                    auxRuta = self.__indS[0]
                     self.__indS=self.incIndS(self.__indS) 
                     self.__indG=self.incIndG(self.__indG)            
-                    # print ("indices:"+str(self.__indS)+str(self.__indG))
+                    # # print ("indices:"+str(self.__indS)+str(self.__indG))
                     band = True
                     while indS!=None and band:
                         if self.__s[indS[0]][indS[1]] == aux2:
@@ -70,18 +101,18 @@ class camino():
                             band = False
                         else:
                             indS = self.incIndS(indS)
-                    self.__cond2 = self.igualesRec()
-                    if indS!= None and self.__chequeaFactibilidadRuta(self.__s[self.__indS[0]]) and self.__chequeaFactibilidadRuta(self.__s[indS[0]]):
-                        print ("entro 1")
+                    self.__condMR = self.igualesRec()
+                    if indS!= None and self.__chequeaFactibilidadRuta(self.__s[auxRuta]) and self.__chequeaFactibilidadRuta(self.__s[indS[0]]):
+                        # print ("entro 2")
                         return self.__s
                     else:
-                        print ("entro 2")
-                        return self.pathRelinking()
+                        # print ("entro 3")
+                        return self.generaCamino()
                 else:
-                    print ("entro 3")
-                    self.__cond2 = self.igualesRec()
+                    # print ("entro 4")
+                    self.__condMR = self.igualesRec()
                     return self.__s
-            elif not self.__cond1:
+            elif not self.__condMT:
                 i = 0
                 b = True
                 while b and i < len(self.__s):
@@ -97,18 +128,18 @@ class camino():
                         b2 = self.__chequeaFactibilidadRuta(self.__s[i]) and self.__chequeaFactibilidadRuta(self.__s[i+1])
                     else:
                         i+=1
-                self.__cond1 = self.igualesTam()
+                self.__condMT = self.igualesTam()
                 if b2:
-                    print ("entro 4")
-                    return self.__s
+                    # print ("entro 5")
+                    return [] if self.__condMT else self.__s
                 else:
-                    print ("entro 5")
-                    return self.pathRelinking()
+                    # print ("entro 6")
+                    return self.generaCamino()
             else:
-                print ("Ya llegamos a la solución guía")
+                # # print ("Ya llegamos a la solución guía")
                 return []
         else:
-            print ("Ya llegamos a la solución guía")
+            # # print ("Ya llegamos a la solución guía")
             return []
 
     def __chequeaFactibilidadRuta(self, ruta):
@@ -154,25 +185,50 @@ class camino():
             return None
 
     def iguales(self):
-        if self.__cond1 and self.__cond2:
+        if self.__condMT and self.__condMR:
             return True
         else:
             return False
     
 
 #### SECCION DE PRUEBAS ####
-s = [[1,4,5,2],[1,9,8,3],[1,6,7,10]]
 
-g = [[1,2,3],[1,4,5,6,7],[1,8,9,10]]
-try:
-    caminito = camino(s, g, [0.0,2.0,4.0,2.0,5.0,6.0,7.0,6.0,3.0,4.0,7.0], 20)
-    c = caminito.pathRelinking()
-    ind =[0,1]
-    while c!=[]:
-        print (str(c)+str(caminito.iguales()))
-        c = caminito.pathRelinking()
+# s = [[1,4,5,2],[1,9,8,3],[1,6,7,10]]
+# g = [[1,2,3,4,9],[1,5,7,8],[1,6,10]]
+# demandas = [0.0,2.0,4.0,2.0,5.0,6.0,7.0,6.0,3.0,4.0]
+# capacidad = 100
 
-    print (str(caminito.iguales()))
-except Exception as e:
-    print (e)
+# s= [[1, 4, 3, 18, 20, 32, 22], [1, 7, 24, 29, 5, 12, 9, 19, 10, 23], [1, 17, 8, 14, 2, 13], [1, 21, 6, 26, 11, 16, 30, 28], [1, 25, 15, 27, 31]]
+# g= [[1, 23, 10, 19, 9, 12, 5, 29, 24, 7], [1, 4, 3, 18, 20, 32, 22], [1, 17, 8, 14, 2, 13], [1, 30, 16, 11, 26, 6, 21], [1, 28, 25, 15, 27, 31]]
+# demandas = [0.0, 19.0, 21.0, 6.0, 19.0, 7.0, 12.0, 16.0, 6.0, 16.0, 8.0, 14.0, 21.0, 16.0, 3.0, 22.0, 18.0, 19.0, 1.0, 24.0, 8.0, 12.0, 4.0, 8.0, 24.0, 24.0, 2.0, 20.0, 15.0, 2.0, 14.0, 9.0]
+# capacidad = 100
 
+# try:
+#     print (str(s)+" Solucion")
+#     caminito = camino(s, g, demandas, capacidad)
+#     c = caminito.getCamino()
+#     print(str(c))
+#     while not caminito.iguales():
+#         c = caminito.getCamino()
+#         print (str(c)+str(caminito.iguales()))
+#     print (str(caminito.iguales()))
+#     print (str(g)+" Guia")
+# except Exception as e:
+#     print (e)
+# print (str(s))
+
+# [[1, 4, 3, 18, 20, 32, 22], [1, 7, 24, 29, 5, 12, 9, 19, 10, 23], [1, 17, 8, 14, 2, 13], [1, 21, 6, 26, 11, 16, 30, 28], [1, 25, 15, 27, 31]]
+# # [[1, 23, 10, 19, 9, 12, 5, 29, 24, 7], [1, 4, 3, 18, 20, 32, 22], [1, 17, 8, 14, 2, 13], [1, 30, 16, 11, 26, 6, 21], [1, 28, 25, 15, 27, 31]]
+
+# [[1, 4, 3, 18, 20, 32, 22], [1, 7, 24, 29, 5, 12, 9, 19, 10, 23], [1, 17, 8, 14, 2, 13], [1, 28, 30, 16, 11, 26, 6, 21], [1, 25, 15, 27, 31]]
+# Se estancó durante 0 min 10 seg. Admitimos una solucion peor para diversificar en nodo 1-->    Costo: 833.532
+# [[1, 23, 10, 19, 9, 12, 5, 29, 24, 7], [1, 4, 3, 18, 20, 32, 22], [1, 17, 8, 14, 2, 13], [1, 30, 16, 11, 26, 6, 21], [1, 28, 25, 15, 27, 31]]
+# Se estancó durante 0 min 9 seg en path relinking. Admitimos una solución de path relinking -->    Costo: 938.076
+# Parto de otra sol inicial para path relinking
+# [[1, 23, 3, 18, 20, 32, 22], [1, 7, 24, 29, 5, 12, 9, 19, 10, 4], [1, 17, 8, 14, 2, 13], [1, 21, 6, 26, 11, 16, 30, 28], [1, 25, 15, 27, 31]]
+# [[1, 23, 10, 19, 9, 12, 5, 29, 24, 7], [1, 4, 3, 18, 20, 32, 22], [1, 17, 8, 14, 2, 13], [1, 30, 16, 11, 26, 6, 21], [1, 28, 25, 15, 27, 31]]
+# Se estancó durante 0 min 10 seg en path relinking. Admitimos una solución de path relinking -->    Costo: 947.338
+# Se estancó durante 0 min 10 seg. Admitimos una solucion peor para diversificar en nodo 1-->    Costo: 869.328
+# Parto de otra sol inicial para path relinking
+# [[1, 23, 3, 18, 20, 32, 22], [1, 7, 24, 29, 5, 12, 9, 19, 10, 4], [1, 17, 8, 14, 2, 13], [1, 28, 30, 16, 11, 26, 6, 21], [1, 25, 15, 27, 31]]
+# [[1, 23, 10, 19, 9, 12, 5, 29, 24, 7], [1, 4, 3, 18, 20, 32, 22], [1, 17, 8, 14, 2, 13], [1, 30, 16, 11, 26, 6, 21], [1, 28, 25, 15, 27, 31]]

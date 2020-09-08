@@ -188,7 +188,7 @@ class Grafo:
         demAcum = 0
         cap = 0
         #for x in secuencia:
-
+        V=[]
         for i in range(0, len(secuencia)):
             x = secuencia[i]
             V.append(Vertice(int(x), self._demanda[x-1]))

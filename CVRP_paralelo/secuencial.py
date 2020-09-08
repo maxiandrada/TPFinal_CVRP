@@ -10,6 +10,7 @@ from os import listdir
 from os.path import isfile, join
 import ntpath
 import sys
+import numpy as np
 
 
 def cargarDesdeFile(pathArchivo):
@@ -73,26 +74,28 @@ def cargarDesdeFile(pathArchivo):
         demandas.append(float(splitLinea[1]))
 
     return nroVehiculos, optimo, capacidad, matrizDist, demandas
+
 def cargaMatrizDistancias(coordenadas):
     matriz = []
     #Arma la matriz de distancias. Calculo la distancia euclidea
     for coordRow in coordenadas:
-        fila = []            
+        fila = []
         for coordCol in coordenadas:
             x1 = float(coordRow[1])
             y1 = float(coordRow[2])
             x2 = float(coordCol[1])
             y2 = float(coordCol[2])
             dist = distancia(x1,y1,x2,y2)
-            
+
             #Para el primer caso. Calculando la distancia euclidea entre si mismo da 0
-            if(dist == 0):
-                dist = 999999999999 #El modelo no deberia tener en cuenta a las diagonal, pero por las dudas
+            if(dist == 0 and float(coordRow[0])==float(coordCol[0])):
+                dist = float("inf")
             fila.append(dist)
 
-        #print("Fila: "+str(fila))    
+        #print("Fila: "+str(fila))
         matriz.append(fila)
-    return matriz    #retorna una matriz de distancia
+    return np.array(matriz)
+
 def distancia(x1,y1,x2,y2):
     return round(math.sqrt((x1-x2)**2+(y1-y2)**2),3)
 def cargarDesdeFile2(pathArchivo):
@@ -168,5 +171,5 @@ nombre = "asdfasdf"
 nroVehiculos, optimo, capacidad, matrizDist, demandas = cargarDesdeFile2(direccion)
 tenureADD = int(len(matrizDist)**(1/2.0))
 tenureDROP = int(len(matrizDist)**(1/2.0))+1
-time = 20.0
-cvrp = CVRP(matrizDist, demandas, nroVehiculos, capacidad, nombre+"_"+str(time)+"min", 'secuencial_', 0, tenureADD, tenureDROP, time, 0.1, optimo)
+time = sys.argv[2]
+cvrp = CVRP(matrizDist, demandas, nroVehiculos, capacidad, nombre+"_"+str(time)+"min", 'secuencial_', 0, tenureADD, tenureDROP, time, 0, optimo)

@@ -191,7 +191,7 @@ nroVehiculos, optimo, capacidad, matrizDist, demandas = cargarDesdeFile2(direcci
 tenureADD = 4
 tenureDROP = 4
 solucionInicial = 0
-time = 20.0
+time = sys.argv[2]
 cvrp = CVRPparalelo(
     matrizDist,
     demandas,

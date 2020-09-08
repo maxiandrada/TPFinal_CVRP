@@ -220,7 +220,7 @@ class CVRPparalelo:
             ADD = []
             DROP = []
 
-            tCoord, nroIntercambios = self.__paralelismo(time () - tCoord > self.__tiempoMPI, tCoord, nroIntercambios)
+            tCoord, nroIntercambios = self.__paralelismo((time () - tCoord > self.__tiempoMPI) and tiempoMax - tiempoEjecuc < 0.01, tCoord, nroIntercambios)
             
             ind_random = np.arange(0,len(ind_permitidos))
             random.shuffle(ind_random)
@@ -373,16 +373,16 @@ class CVRPparalelo:
             elif iteracEstancamiento >iteracEstancMax and len(self.__solPR) > 0 and contEstanOpt > cantMaxEstancOpt:
                 cad = "\n+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+- Iteracion %d  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-\n" %(iterac)
                 self.__txt.escribir(cad)
-                if self.c is None:
+                if self.__c is None:
                     print ("Parámetros: %d OL, %d SPR. El nodo %d busca nueva solucion para PATH RELINKING"%(len(self.__optimosLocales), len(self.__solPR), self.__rank))
                     sRutas = copy.deepcopy(self.__optimosLocales[-1])
                     gRutas = self.__solPR.pop(-1)
                     sInt = self.getListaRutas(sRutas)
                     gInt = self.getListaRutas(gRutas)
-                    self.c = camino(sInt , gInt, self.__Demandas, self.__capacidadMax, self.__Distancias)
+                    self.__c = camino(sInt , gInt, self.__Demandas, self.__capacidadMax, self.__Distancias)
                     pr = ""
                 else: 
-                    if self.c.iguales():
+                    if self.__c.iguales():
                         print ("Parámetros: %d OL, %d SPR. El nodo %d busca nueva solucion para PATH RELINKING"%(len(self.__optimosLocales), len(self.__solPR), self.__rank))
                         pr += str(gInt)
                         #print (pr)
@@ -391,14 +391,14 @@ class CVRPparalelo:
                         gRutas = self.__solPR.pop(-1)
                         sInt = self.getListaRutas(sRutas)
                         gInt = self.getListaRutas(gRutas)
-                        self.c.setSol(sInt , gInt)
+                        self.__c.setSol(sInt , gInt)
                         pr = str(sInt)+"\n"
-                        while self.c.iguales() and i<len(self.__optimosLocales):
+                        while self.__c.iguales() and i<len(self.__optimosLocales):
                             sRutas = copy.deepcopy(self.__optimosLocales[i])
                             sInt = self.getListaRutas(sRutas)
-                            self.c.setSol(sInt , gInt)
+                            self.__c.setSol(sInt , gInt)
                             i+=1
-                        if self.c.iguales():
+                        if self.__c.iguales():
                             print ("El nodo %d se estancó en PATH RELINKING. Saliendo!!"%(self.__rank))
                         else:
                             print ("El nodo %d encontró nueva sol y guia para PATH RELINKING"%(self.__rank))
@@ -407,7 +407,7 @@ class CVRPparalelo:
                     else:
                         if cantPR < cantMaxPR:
                             pr+=str(sInt)+"\n"
-                            nuevas_rutas = self.c.pathRelinking()
+                            nuevas_rutas = self.__c.pathRelinking()
                             pr+=str(nuevas_rutas)+"\n"
                             nueva_solucion = self.cargaSolucion(nuevas_rutas)
 
