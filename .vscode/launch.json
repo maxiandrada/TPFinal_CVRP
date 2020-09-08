@@ -9,7 +9,7 @@
             "type": "python",
             "request": "launch",
             "program": "mpi.py",
-            "args": ["Instancias/X-n1001-k43.vrp", "10"],
+            "args": ["Instancias/Set M/M-n200-k17.vrp", "10"],
             "console": "integratedTerminal"
         }
     ]

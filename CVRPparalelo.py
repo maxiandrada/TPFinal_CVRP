@@ -16,7 +16,7 @@ from caminoCVRP import camino
 from mpi4py import MPI
 
 class CVRPparalelo:
-    def __init__(self, M, D, nroV, capac, archivo, carpeta, solI, tADD, tDROP, tiempo, porcentaje, optimo):
+    def __init__(self, M, D, nroV, capac, archivo, carpeta, solI, tADD, tDROP, tiempo, porcentaje, optimo, rutasIniciales=None,rank=None):
         self.__comm = MPI.COMM_WORLD
         self.__tiempoMPI = 0
         self.__rank = self.__comm.Get_rank()
@@ -45,24 +45,32 @@ class CVRPparalelo:
         self.__tenureMaxDROP = int(tDROP*1.7)
         self.__txt = clsTxt(str(archivo), str(carpeta))
         self.__tiempoMaxEjec = float(tiempo)
+        self.rank = rank
         self.escribirDatos()
-        
         self.__S.setCapacidadMax(self.__capacidadMax)
         tiempoIni = time()
-        self.__rutas = self.__S.rutasIniciales(self.__tipoSolucionIni, self.__nroVehiculos, self.__Demandas, self.__capacidadMax,self._G)        #print("tiempo solucion inicial: ", time()-tiempoIni)
+
+        if rutasIniciales is not None and isinstance(rutasIniciales,list):
+            print("Se cargaron las rutas iniciales desde constructor")
+            self.setRutasIniciales(rutasIniciales)
+
         # if self.__rank == 0:
         #     self.__rutas = self.__comm.Bcast(self.__rutas)
         # else:
         #     self.__rutas = self.__comm.Bcast(self.__rutas, root = 0)
         self.__tiempoMaxEjec = self.__tiempoMaxEjec - ((time()-tiempoIni)/60)
         #tiempoIni = time()
-        self.__S = self.cargaSolucion(self.__rutas)
         #print("tiempo carga solucion: ", time()-tiempoIni)
-        self.tabuSearch()
+    def calculaRutasIniciales(self):
+        return self.__S.rutasIniciales(self.__tipoSolucionIni, self.__nroVehiculos, self.__Demandas, self.__capacidadMax,self._G)        #print("tiempo solucion inicial: ", time()-tiempoIni)
+
+    def setRutasIniciales(self,rutas):
+        self.__rutas = rutas
+        self.__S = self.cargaSolucion(self.__rutas)
 
     #Escribe los datos iniciales: el grafo inicial y la demanda
     def escribirDatos(self):
-        self.__txt.escribir("+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ GRAFO CARGADO +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-")
+        self.__txt.escribir("+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ GRAFO CARGADO "+ str(self.rank) +" +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-")
         self.__txt.escribir(str(self._G))
         cad = "\nDemandas:"
         for v in self._G.getV():
@@ -245,7 +253,7 @@ class CVRPparalelo:
 
             #Si encontramos una mejor solucion que la tomada como referencia
             if(nuevo_costo < solucion_refer.getCostoAsociado() and aristasADD != []):
-                cad = "\n+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+- Iteracion %d  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-\n" %(iterac)
+                cad = "\n+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+- Iteracion %d Nodo %d +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-\n" %(iterac,self.rank)
                 self.__txt.escribir(cad)
 
                 #tiempoInicial = time()

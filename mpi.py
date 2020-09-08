@@ -165,36 +165,71 @@ comm = MPI.COMM_WORLD
 direccion = sys.argv[1]
 
 nombre = os.path.basename(direccion)
-
-
+size = comm.Get_size()
 rank = comm.Get_rank()
+
 if rank == 0:
     nroVehiculos, optimo, capacidad, matrizDist, demandas = cargarDesdeFile2(direccion)
-    dic = {'nroVehiculos':nroVehiculos, 'optimo':optimo, 'capacidad':capacidad, 'matrizDist':matrizDist, 'demandas':demandas}
-    print ("es aca"+str(rank))
+
+
+    tenureADD = 4
+    tenureDROP = 4
+    solucionInicial = 0
+    time = sys.argv[2]
+    cvrp = CVRPparalelo(
+        matrizDist,
+        demandas,
+        nroVehiculos,
+        capacidad,
+        nombre+"_"+str(time)+"min", 'mpi_',
+        solucionInicial, 
+        tenureADD, 
+        tenureDROP, 
+        time, 
+        0.1, 
+        optimo,
+        rank=rank
+        )
+    print("Calculando rutas iniciales en nodo root")
+    rutas = cvrp.calculaRutasIniciales()
+    print("Se cargaron rutas iniciales en nodo root")
+    dic = {'nroVehiculos':nroVehiculos, 'optimo':optimo, 'capacidad':capacidad, 'matrizDist':matrizDist, 'demandas':demandas, "solInicial": rutas}
+    for r in range(1,size):
+        print(f"enviando datos a nodo {r} ")
+        comm.send(dic,dest=r)
+    
+    cvrp.setRutasIniciales(rutas)
+    cvrp.tabuSearch()
+    
+
 else:
-    dic =None
+    dic = comm.recv()
+    nroVehiculos = dic['nroVehiculos']
+    optimo = dic['optimo']
+    capacidad = dic['capacidad']
+    matrizDist = dic['matrizDist']
+    demandas = dic['demandas']
+    rutas = dic['solInicial']
 
-dic = comm.bcast(dic, root = 0)
-nroVehiculos = dic['nroVehiculos']
-optimo = dic['optimo']
-capacidad = dic['capacidad']
-matrizDist = dic['matrizDist']
-demandas = dic['demandas']
+    tenureADD = 4
+    tenureDROP = 4
+    solucionInicial = 0
+    time = sys.argv[2]
+    print("Creando Instancias CVRP en nodo ", rank)
+    cvrp = CVRPparalelo(
+        matrizDist,
+        demandas,
+        nroVehiculos,
+        capacidad,
+        nombre+"_"+str(time)+"min", 'mpi_',
+        solucionInicial, 
+        tenureADD, 
+        tenureDROP, 
+        time, 
+        0.1, 
+        optimo,
+        rutasIniciales=rutas,
+        rank = rank)
 
-tenureADD = 4
-tenureDROP = 4
-solucionInicial = 0
-time = sys.argv[2]
-cvrp = CVRPparalelo(
-    matrizDist,
-    demandas,
-    nroVehiculos,
-    capacidad,
-    nombre+"_"+str(time)+"min", 'mpi_',
-    solucionInicial, 
-    tenureADD, 
-    tenureDROP, 
-    time, 
-    0.1, 
-    optimo)
+
+    cvrp.tabuSearch()
