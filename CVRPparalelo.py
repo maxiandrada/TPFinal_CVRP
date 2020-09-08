@@ -50,6 +50,10 @@ class CVRPparalelo:
         self.__S.setCapacidadMax(self.__capacidadMax)
         tiempoIni = time()
         self.__rutas = self.__S.rutasIniciales(self.__tipoSolucionIni, self.__nroVehiculos, self.__Demandas, self.__capacidadMax,self._G)        #print("tiempo solucion inicial: ", time()-tiempoIni)
+        # if self.__rank == 0:
+        #     self.__rutas = self.__comm.Bcast(self.__rutas)
+        # else:
+        #     self.__rutas = self.__comm.Bcast(self.__rutas, root = 0)
         self.__tiempoMaxEjec = self.__tiempoMaxEjec - ((time()-tiempoIni)/60)
         #tiempoIni = time()
         self.__S = self.cargaSolucion(self.__rutas)

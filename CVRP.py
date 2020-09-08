@@ -62,7 +62,7 @@ class CVRP:
 
     #Carga la solucion general a partir de las rutas
     def cargaSolucion(self, rutas):
-        t = time()
+        # t = time()
         S = Solucion(self.__Distancias, self.__Demandas, sum(self.__Demandas),self._G,True)
         cap = 0
         costoTotal = 0
@@ -92,7 +92,7 @@ class CVRP:
         S.setCostoAsociado(costoTotal)
         S.setCapacidad(cap)
         S.setCapacidadMax(self.__capacidadMax)
-        print(f"cargaSolucion: {time()-t}")
+        # print(f"cargaSolucion: {time()-t}")
         return S
 
 

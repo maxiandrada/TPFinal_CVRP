@@ -11,6 +11,9 @@ from os.path import isfile, join
 import ntpath
 import sys
 import numpy as np
+from mpi4py import MPI
+
+
 
 def cargarDesdeFile(pathArchivo):
     #+-+-+-+-+-Para cargar la distancias+-+-+-+-+-+-+-+-
@@ -68,27 +71,6 @@ def cargarDesdeFile(pathArchivo):
         demandas.append(float(splitLinea[1]))
 
     return nroVehiculos, optimo, capacidad, matrizDist, demandas
-
-# def cargaMatrizDistancias(coordenadas):
-#     matriz = []
-#     #Arma la matriz de distancias. Calculo la distancia euclidea
-#     for coordRow in coordenadas:
-#         fila = []            
-#         for coordCol in coordenadas:
-#             x1 = float(coordRow[1])
-#             y1 = float(coordRow[2])
-#             x2 = float(coordCol[1])
-#             y2 = float(coordCol[2])
-#             dist = distancia(x1,y1,x2,y2)
-            
-#             #Para el primer caso. Calculando la distancia euclidea entre si mismo da 0
-#             if(dist == 0):
-#                 dist = float("inf") #El modelo no deberia tener en cuenta a las diagonal, pero por las dudas
-#             fila.append(dist)
-
-#         #print("Fila: "+str(fila))    
-#         matriz.append(fila)
-#     return matriz    #retorna una matriz de distancia
 
 def cargaMatrizDistancias(coordenadas):
     matriz = []
@@ -179,15 +161,27 @@ def cargarDesdeFile2(pathArchivo):
             demandas.append(float(splitLinea[1]))
     return nroVehiculos, optimo, capacidad, matrizDist, demandas
 
-# direccion = "/home/alejandro/DA80D3CB80D3AC6F/COSAS SALVADAS/unsa/LAS/Opt - Optimización Concurrente y Paralela/tpFinal/CVRP/ubuntu/TPFinal_CVRP/Instancias/Set X/X-n548-k50.vrp"
-# direccion = "/home/alejandro/DA80D3CB80D3AC6F/COSAS SALVADAS/unsa/LAS/Opt - Optimización Concurrente y Paralela/tpFinal/CVRP/ubuntu/TPFinal_CVRP/Instancias/X-n1001-k43.vrp"
-# direccion = "/home/alejandro/windows/COSAS SALVADAS/unsa/LAS/Opt - Optimización Concurrente y Paralela/tpFinal/CVRP/ubuntu/TPFinal_CVRP/Instancias/X-n801-k40.vrp"
+comm = MPI.COMM_WORLD
 direccion = sys.argv[1]
 
 nombre = os.path.basename(direccion)
 
 
-nroVehiculos, optimo, capacidad, matrizDist, demandas = cargarDesdeFile2(direccion)
+rank = comm.Get_rank()
+if rank == 0:
+    nroVehiculos, optimo, capacidad, matrizDist, demandas = cargarDesdeFile2(direccion)
+    dic = {'nroVehiculos':nroVehiculos, 'optimo':optimo, 'capacidad':capacidad, 'matrizDist':matrizDist, 'demandas':demandas}
+    print ("es aca"+str(rank))
+else:
+    dic =None
+
+dic = comm.bcast(dic, root = 0)
+nroVehiculos = dic['nroVehiculos']
+optimo = dic['optimo']
+capacidad = dic['capacidad']
+matrizDist = dic['matrizDist']
+demandas = dic['demandas']
+
 tenureADD = 4
 tenureDROP = 4
 solucionInicial = 0

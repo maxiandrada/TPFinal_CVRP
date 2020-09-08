@@ -166,7 +166,7 @@ def cargarDesdeFile2(pathArchivo):
 
 direccion = sys.argv[1]  
 
-nombre = "asdfasdf"
+nombre = os.path.basename(direccion)
 
 nroVehiculos, optimo, capacidad, matrizDist, demandas = cargarDesdeFile2(direccion)
 tenureADD = int(len(matrizDist)**(1/2.0))
