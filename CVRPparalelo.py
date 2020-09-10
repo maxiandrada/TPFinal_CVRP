@@ -200,7 +200,7 @@ class CVRPparalelo:
         print("Costo sol Inicial: "+str(self.__S.getCostoAsociado())+"      ==> Optimo: "+str(self.__optimo)+"  Desvio: "+str(round(porcentaje*100,3))+"%")
         
 
-        cantIntercambios = 20
+        cantIntercambios = 40
         self.__tiempoMPI = tiempoMax / cantIntercambios
         tCoord = time()
         nroIntercambios = 0
@@ -232,7 +232,7 @@ class CVRPparalelo:
             ADD = []
             DROP = []
 
-            tCoord, nroIntercambios = self.__paralelismo((time () - tCoord > self.__tiempoMPI) and tiempoMax - tiempoEjecuc < 0.01, tCoord, nroIntercambios)
+            tCoord, nroIntercambios = self.__paralelismo((time () - tCoord > self.__tiempoMPI), tCoord, nroIntercambios)
             
             ind_random = np.arange(0,len(ind_permitidos))
             random.shuffle(ind_random)
@@ -565,7 +565,7 @@ class CVRPparalelo:
             for tupla in listaS:
                 self.__poolSol.append(tupla[2])
             self.__poolSol.append(copy.deepcopy(self.__rutas))
-            while len(self.__poolSol) >= 50:
+            while len(self.__poolSol) >= 10:
                 self.__poolSol.pop(0)
             tCoord=time()
         return tCoord, nroIntercambios
