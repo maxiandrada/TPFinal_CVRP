@@ -1,12 +1,15 @@
 from Vertice import Vertice
 
 class Arista():
-    def __init__(self,origen,destino,peso):
+    def __init__(self,origen,destino,peso,tam = None):
         self._origen = origen
         self._destino = destino
         self._peso = peso
         self._frecuencia = 0
-        self._id = 0
+        if tam is not None:
+            self.setId(origen.getValue()-1, destino.getValue()-1, tam)
+        else:
+            self._id = 0
     
     def incFrecuencia(self):
         self._frecuencia+=1
