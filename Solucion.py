@@ -844,7 +844,8 @@ class Solucion(Grafo):
     r: 1,2,3,4,5,a,b,6,7,8      -> 4ta opcion
     """
     def evaluar_3opt(self, aristaIni, ind_rutas, ind_A, rutas):
-        sol_factible_12 = sol_factible_34 = False
+        sol_factible_12 = False
+        sol_factible_34 = False
         #Opcion: 0 (1ra opcion) | 1 (2da opcion) | 3 (3ra opcion) | 4 (4ta opcion)
         #Misma ruta: -1(1ra opcion) | -2 (2da opcion) | -3 (3ra opcion) | -4 (4ta opcion)
         opcion = 0  
