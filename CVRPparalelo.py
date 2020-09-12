@@ -830,7 +830,6 @@ class CVRPparalelo:
         tiempoTotal = time() - tiempoIni
         print("\nTermino!! :)")
         print("Tiempo total: " + str(int(tiempoTotal/60))+"min "+str(int(tiempoTotal%60))+"seg\n")
-        self.__comm.allgather((self.__S, self.__rank, self.__rutas, .0 , self.__contSol, self.__optimosLocales[-1]))
         self.__txt.escribir("\n+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+- Solucion Optima +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-")
         sol_ini = ""
         for i in range(0, len(self.__rutas)):
