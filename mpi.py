@@ -14,7 +14,6 @@ import numpy as np
 from mpi4py import MPI
 
 
-
 def cargarDesdeFile(pathArchivo):
     #+-+-+-+-+-Para cargar la distancias+-+-+-+-+-+-+-+-
     
@@ -171,9 +170,8 @@ rank = comm.Get_rank()
 if rank == 0:
     nroVehiculos, optimo, capacidad, matrizDist, demandas = cargarDesdeFile2(direccion)
 
-
-    tenureADD = 4
-    tenureDROP = 4
+    tenureADD = int(len(matrizDist)**(1/2.0))
+    tenureDROP = int(len(matrizDist)**(1/2.0))+1
     solucionInicial = 0
     time = sys.argv[2]
     cvrp = CVRPparalelo(
@@ -201,7 +199,6 @@ if rank == 0:
     cvrp.setRutasIniciales(rutas)
     cvrp.tabuSearch()
     
-
 else:
     dic = comm.recv()
     nroVehiculos = dic['nroVehiculos']
@@ -211,8 +208,8 @@ else:
     demandas = dic['demandas']
     rutas = dic['solInicial']
 
-    tenureADD = 4
-    tenureDROP = 4
+    tenureADD = int(len(matrizDist)**(1/2.0))
+    tenureDROP = int(len(matrizDist)**(1/2.0))+1
     solucionInicial = 0
     time = sys.argv[2]
     print("Creando Instancias CVRP en nodo ", rank)

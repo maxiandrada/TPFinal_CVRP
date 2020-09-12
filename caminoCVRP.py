@@ -148,7 +148,7 @@ class camino():
         # cad = "acu = "
         for i in range(len(ruta)):
             acu += self.__demandas[ruta[i]-1]
-            cad += str(self.__demandas[ruta[i]-1])
+            # cad += str(self.__demandas[ruta[i]-1])
         # print (cad)
         return False if acu > self.__capacidad else True
 

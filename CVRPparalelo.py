@@ -188,7 +188,7 @@ class CVRPparalelo:
         tiempo = time()
         Aristas_Opt = np.array([], dtype = object)
         for EP in self._G.getA():
-            if(EP.getOrigen().getValue() < EP.getDestino().getValue() and EP.getPeso() <= umbral):
+            if(EP.getOrigen().getValue() < EP.getDestino().getValue() and EP.getPeso() <= umbral):           #asdf   por que aca solo pregunta EP.getOrigen().getValue() < EP.getDestino().getValue() ????
                 Aristas_Opt = np.append(Aristas_Opt, EP)
                 ind_permitidos = np.append(ind_permitidos, EP.getId())
         # Aristas = Aristas_Opt
@@ -200,7 +200,7 @@ class CVRPparalelo:
         print("Costo sol Inicial: "+str(self.__S.getCostoAsociado())+"      ==> Optimo: "+str(self.__optimo)+"  Desvio: "+str(round(porcentaje*100,3))+"%")
         
 
-        cantIntercambios = 40
+        cantIntercambios = 20
         self.__tiempoMPI = tiempoMax / cantIntercambios
         tCoord = time()
         nroIntercambios = 0
@@ -213,7 +213,10 @@ class CVRPparalelo:
         cantPR = 0
 
 
-        while(tiempoEjecuc < tiempoMax and porcentaje*100 > self.__porcentajeParada):
+        while(tiempoEjecuc < tiempoMax and bandera): #bandera para forzar detención de todos los nodos
+            if not porcentaje*100 > self.__porcentajeParada:
+                bandera = False
+                tCoord, nroIntercambios, bandera = self.__paralelismo(True, tCoord, nroIntercambios, bandera)
             if(cond_Optimiz):
                 # tiempoInicial = 0
                 # tiempoFinal = 0
@@ -232,7 +235,7 @@ class CVRPparalelo:
             ADD = []
             DROP = []
 
-            tCoord, nroIntercambios = self.__paralelismo((time () - tCoord > self.__tiempoMPI), tCoord, nroIntercambios)
+            tCoord, nroIntercambios, bandera = self.__paralelismo((time () - tCoord > self.__tiempoMPI), tCoord, nroIntercambios, bandera)
             
             ind_random = np.arange(0,len(ind_permitidos))
             random.shuffle(ind_random)
@@ -382,7 +385,7 @@ class CVRPparalelo:
                 self.__beta = 2
                 contEstanOpt += 1
 
-            elif iteracEstancamiento >iteracEstancMax and len(self.__solPR) > 0 and contEstanOpt > cantMaxEstancOpt:
+            elif iteracEstancamiento >iteracEstancMax and len(self.__solPR) > 0 and contEstanOpt > cantMaxEstancOpt and False:
                 cad = "\n+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+- Iteracion %d  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-\n" %(iterac)
                 self.__txt.escribir(cad)
                 if self.__c is None:
@@ -472,7 +475,7 @@ class CVRPparalelo:
                 contEstanOpt+=1
             #Si se terminaron los permitidos
             elif(ind_permitidos == []):
-                cad = "\n+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+- Iteracion %d  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-\n" %(iterac)
+                cad = "\n+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+- Iteracion %d nodo %d +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-\n" %(iterac, self.__rank)
                 self.__txt.escribir(cad)
                 nuevas_rutas = nueva_solucion.swap(k_Opt, aristasADD[0], rutas_refer, indRutas, indAristas)
                 nueva_solucion = self.cargaSolucion(nuevas_rutas)
@@ -510,13 +513,15 @@ class CVRPparalelo:
         #Fin del while. Imprimo los valores obtenidos
         self.escribirDatosFinales(tiempoIni, iterac, tiempoEstancamiento)
         
-    def __paralelismo(self, cond, tCoord, nroIntercambios):
+    def __paralelismo(self, cond, tCoord, nroIntercambios, bandera):
         if cond:
             nroIntercambios +=1
             print ("Intercambio %d con %f de dif. de tiempo <<<<--------------------------------------- MPI nodo %d <<<<---------------------------------"%(nroIntercambios, (time()-tCoord)-self.__tiempoMPI, self.__rank))
-            
+            print ("Nodo %d entró allgather"%(self.__rank))
             delay = (time()-tCoord)-self.__tiempoMPI
-            listaS = self.__comm.allgather((self.__S, self.__rank, self.__rutas, delay, self.__contSol, self.__optimosLocales[-1])) #solucion_refer, Aristas, lista_tabu, nueva_solucion, ind_permitidos, ind_permitidos, self.__rutas, Aristas, lista_tabu, ind_permitidos, rutas_refer, self._G, nueva_solucion
+            listaS = self.__comm.allgather((self.__S, self.__rank, self.__rutas, delay, self.__contSol, self.__optimosLocales[-1], bandera)) #solucion_refer, Aristas, lista_tabu, nueva_solucion, ind_permitidos, ind_permitidos, self.__rutas, Aristas, lista_tabu, ind_permitidos, rutas_refer, self._G, nueva_solucion
+            print ("Nodo %d salió allgather"%(self.__rank))
+            bandera = False not in [t[6] for t in listaS]   #si no hay False en la lista entonces los nodos siguen ejecutando
             for z in listaS:
                 if not self.__rank == z[1]:
                     self.__solPR.append(z[5]) 
@@ -556,7 +561,7 @@ class CVRPparalelo:
                 j = i
                 while j < len(listaS):
                     costo = abs(self.getCostoAsociadoRutas(self.__poolSol[i]) - self.getCostoAsociadoRutas(listaS[j][2]))
-                    if costo<0.00001:
+                    if costo<0.0001:
                         listaS.pop(j)
                         print ("Se quitó una solución repetida con el mismo peso que un óptimo local en nodo %d"%(self.__rank))
                     else:
@@ -568,7 +573,7 @@ class CVRPparalelo:
             while len(self.__poolSol) >= 10:
                 self.__poolSol.pop(0)
             tCoord=time()
-        return tCoord, nroIntercambios
+        return tCoord, nroIntercambios, bandera
 
     def getPermitidos(self, Aristas, umbral, solucion):
         AristasNuevas = []
@@ -825,6 +830,7 @@ class CVRPparalelo:
         tiempoTotal = time() - tiempoIni
         print("\nTermino!! :)")
         print("Tiempo total: " + str(int(tiempoTotal/60))+"min "+str(int(tiempoTotal%60))+"seg\n")
+        self.__comm.allgather((self.__S, self.__rank, self.__rutas, .0 , self.__contSol, self.__optimosLocales[-1]))
         self.__txt.escribir("\n+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+- Solucion Optima +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-")
         sol_ini = ""
         for i in range(0, len(self.__rutas)):
