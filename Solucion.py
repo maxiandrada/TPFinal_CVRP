@@ -80,12 +80,17 @@ class Solucion(Grafo):
                     print("se encontro solución inicial factible :)")
                     sol_factible = True
                     rutas = self.cargarRutas(R, capacidad,G)
+                    self.eliminarRutasSobrantes(rutas,nroVehiculos,capacidad)
             elif(strSolInicial==1):
                 print("Sol Inicial por Vecino Cercano...")
                 sol_factible = self.solInicial_VecinoCercano(nroVehiculos, capacidad, demandas, rutas,G)
                 print(rutas)
                 if(sol_factible):
                     rutas = self.cargarRutas(rutas, capacidad,G)
+                else:
+                    rutas = self.cargarRutas(rutas, capacidad,G)
+                    self.eliminarRutasSobrantes(rutas,nroVehiculos,capacidad)
+                    sol_factible = True
                 strSolInicial = 0
             elif(strSolInicial == 2):
                 print("Sol Inicial secuencial...")
@@ -98,6 +103,7 @@ class Solucion(Grafo):
                 random.shuffle(secuenciaInd)
                 self.cargar_secuencia(secuenciaInd, nroVehiculos, demandas, capacidad, rutas)
 
+        print("Cantidad de Vehículos "+ str(nroVehiculos)+" cantidad de rutas: "+str(len(rutas)))
         return rutas
     #Cargar las rutas a partir de una lista de enteros
     def cargar_secuencia(self, secuencia, nroVehiculos, demandas, capacidad, rutas):
@@ -180,10 +186,10 @@ class Solucion(Grafo):
         
         return indMasCercano
 
-    #Cargar rutas de Clark y Wright
     def cargarRutas(self, rutas, capacidad,gr):
         R = []
-        
+        t = time()
+        print("Se inició cargarRutas")
         for r in rutas:
             S = Solucion(self._matrizDistancias, self._demanda,capacidad,G=gr,vacio=True)
             #cap = S.cargarDesdeSecuenciaDeVertices(S.cargaVertices(r, False))
@@ -191,7 +197,7 @@ class Solucion(Grafo):
             S.setCapacidad(cap)
             S.setCapacidadMax(capacidad)
             R.append(S)
-        
+        print("tiempo cargar rutas: ", time()-t)
         return R
 
     def mezclarRuta(self,r1,r2,rutas):
@@ -199,30 +205,33 @@ class Solucion(Grafo):
         rutas[r1] = rutas[r1] + rutas[r2][1:]
     
     def obtenerAhorrosOncan(self,_lambda, mu,ni):
+        t1 = time()
+        print("empezó obtener ahorros")
         M = self._matrizDistancias
         D = self._demanda
         avgD = sum(D)/len(D)
         ahorros = []
+        
         for i in range(1,len(M)-1):
             for j in range(i+1,len(M)):
                 s = M[i][0]+ M[0][j]- _lambda*M[i][j] + mu * abs(M[i][0]-M[0][j]) + ni * ((D[i]-D[j])/avgD)
+                t = (i+1,j+1,s)
+                ahorros.append(t)
+        print("tiempo obtener ahorros ", time()-t1)
+        ahorros = sorted(ahorros, key=lambda x: x[2], reverse=True)
+        return ahorros
+
+    def obtenerAhorros(self):
+        M = self._matrizDistancias
+        ahorros = []
+        for i in range(1,len(M)-1):
+            for j in range(i+1,len(M)):
+                s = M[i][0]+ M[0][j]-M[i][j] 
                 s = round(s,3)
                 t = (i+1,j+1,s)
                 ahorros.append(t)
         ahorros = sorted(ahorros, key=lambda x: x[2], reverse=True)
         return ahorros
-
-    # def obtenerAhorros(self):
-    #     M = self._matrizDistancias
-    #     ahorros = []
-    #     for i in range(1,len(M)-1):
-    #         for j in range(i+1,len(M)):
-    #             s = M[i][0]+ M[0][j]-M[i][j] 
-    #             s = round(s,3)
-    #             t = (i+1,j+1,s)
-    #             ahorros.append(t)
-    #     ahorros = sorted(ahorros, key=lambda x: x[2], reverse=True)
-    #     return ahorros
     
     def removerAhorros(self,lista,i,c):
         ret = [x for x in lista if x[i]!=c]
@@ -233,12 +242,12 @@ class Solucion(Grafo):
         r = 0 #Indice ruta
         cond = True
         while(r<len(rutas) and cond):
-            if(v1 in rutas[r]):
+            if v1 in rutas[r]:
                 cond = False
-                c=rutas[r].index(v1)
+                c = rutas[r].index(v1)
             else:
                 r+=1
-        return (r,c)  
+        return (r, c)  
 
     def esInterno(self, c,ruta):
         if c in ruta:  
@@ -270,22 +279,19 @@ class Solucion(Grafo):
         # _lambda = 1
         # mu = 0
         # ni = 0
-        #t = time()
-
+        t = time()
         #sol_factible = False
         iteracion = nroIteracAntes
         #while(not sol_factible):
         ahorros = self.obtenerAhorrosOncan(_lambda,mu,ni)
         # ahorros = self.obtenerAhorros()
         dem = self._demanda
-        rutas = []
-        for i in range(2,self.getGrado()+1):
-            R = []
-            R.append(1)
-            R.append(i)
-            rutas.append(R)
-        
-        while(len(ahorros)>0):
+        recargaAhorro = True
+        rutas = [[1,i] for i in range(2,self.getGrado()+1)]
+        print("inició clarke wright")
+
+        while(len(ahorros)>0 and len(rutas)!=nroVehiculos):
+            t2 = time()
             mejorAhorro = ahorros.pop(0)
             capacidadMax = self.__capacidadMax
             i = self.buscar(mejorAhorro[0],rutas) # i = (r1,c1) índice de la ruta en la que se encuentra 
@@ -293,7 +299,6 @@ class Solucion(Grafo):
             IesInterno = self.esInterno(mejorAhorro[0],rutas[i[0]])
             JesInterno = self.esInterno(mejorAhorro[1],rutas[j[0]])
             demCliente = dem[mejorAhorro[1]-1]
-
             if (len(rutas[i[0]]) == 2 and len(rutas[j[0]]) == 2) or (self.estaEnUnRutaNoVacia(i[0],rutas) and not IesInterno and self.estaEnUnRutaNoVacia(j[0],rutas) and not JesInterno and i[0]!=j[0]):
                 carga1 = self.cargaTotal(dem,rutas[i[0]])
                 carga2 = self.cargaTotal(dem,rutas[j[0]])
@@ -308,9 +313,6 @@ class Solucion(Grafo):
                         ind = rutas[i[0]].index(mejorAhorro[0])
                         rutas[i[0]].insert(ind+1,mejorAhorro[1])
                         self.removeRuta(j[0],rutas)
-                        i = self.buscar(mejorAhorro[0],rutas)
-                        IesInterno = self.esInterno(mejorAhorro[0],rutas[i[0]])
-                        JesInterno = self.esInterno(mejorAhorro[1],rutas[i[0]])
                 elif(self.estaEnUnRutaNoVacia(j[0],rutas) and  not self.estaEnUnRutaNoVacia(i[0],rutas) and not JesInterno):
                     demCliente = dem[mejorAhorro[0]-1]
                     cargaRuta = self.cargaTotal(dem,rutas[j[0]])
@@ -321,32 +323,27 @@ class Solucion(Grafo):
                             ind = rutas[j[0]].index(mejorAhorro[1])
                             rutas[j[0]].insert(ind+1,mejorAhorro[0])
                         self.removeRuta(i[0],rutas)
-                        j = self.buscar(mejorAhorro[1],rutas)
-                        JesInterno = self.esInterno(mejorAhorro[0],rutas[j[0]])
-                        IesInterno = self.esInterno(mejorAhorro[1],[j[0]])
-        
-        if(len(rutas)!=nroVehiculos):
-            if(iteracion == 0):
-                _lambda = 0.1 
-                mu = 2
-                ni = 2 
-            elif(iteracion > 3):
-                _lambda += 1
-                mu -= 1
-                ni -= 1
-            else:
-                _lambda += 0.1
-                mu -= 0.1
-                ni -= 0.1
-            rutas = []
-            iteracion +=1
+
+            #print("tiempo iteración cw ", time()-t2)
+        # if(len(rutas)!=nroVehiculos):
+        #     if(iteracion == 0):
+        #         _lambda = 0.1 
+        #         mu = 2
+        #         ni = 2 
+        #     elif(iteracion > 3):
+        #         _lambda += 1
+        #         mu -= 1
+        #         ni -= 1
+        #     else:
+        #         _lambda += 0.1
+        #         mu -= 0.1
+        #         ni -= 0.1
+        #     rutas = []
+        #     iteracion +=1
         #print(len(rutas))
 
+        print("tiempo clarke wright ", time()-t)
         return rutas, _lambda, mu, ni, iteracion
-        # self.cargarRutas(rutas,dem)
-        # print(time()-t)
-        # print(self)
-        # print("Terminó")
 
     def swap(self, k_Opt, aristaIni, rutas_orig, indRutas, indAristas):
         rutas = copy.deepcopy(rutas_orig)
@@ -356,10 +353,13 @@ class Solucion(Grafo):
         elif(k_Opt[0] == 3):
             opcion = k_Opt[1]
             rutas = self.swap_3opt(aristaIni, indRutas, indAristas, rutas, opcion)
-        else:
+        elif(k_Opt[0] == 4):
             opcion = k_Opt[1]
             rutas = self.swap_4opt(aristaIni, indRutas, indAristas, rutas, opcion)
-        
+        elif(k_Opt[0] == 5):
+            opcion = k_Opt[1]
+            rutas = self.swap_Exchange(aristaIni, indRutas, indAristas, rutas, opcion)
+
         return rutas
 
     def getPosiciones(self, V_origen, V_destino, rutas):
@@ -448,6 +448,18 @@ class Solucion(Grafo):
                 DROP = DROP_4opt
                 indDROP = indDROP_4opt
             
+            indR = [indRutas[0], indRutas[1]]
+            indA = [indAristas[0], indAristas[1]]
+            nuevoCosto, tipo_exch, DROP_exch, indDROP_exch  = self.evaluar_Exchange(aristaIni, indR, indA, rutas)
+            if(nuevoCosto < costoSolucion or (condEstancamiento and nuevoCosto!=float("inf")) ):
+                costoSolucion = nuevoCosto
+                kOpt = 5
+                tipo_kOpt = tipo_exch
+                DROP = DROP_exch
+                indDROP = indDROP_exch
+                #ADD = ADD_exch
+                #indADD = indADD_exch
+
         if(costoSolucion != float("inf")):
             index = [i for i in range(0,len(ind_permitidos)) if ind_permitidos[i] in indDROP or ind_permitidos[i] in indADD]
             ind_permitidos = np.delete(ind_permitidos, index)
@@ -457,19 +469,19 @@ class Solucion(Grafo):
         
         return costoSolucion, [kOpt, tipo_kOpt], indRutas, indAristas, ADD, DROP
     
-    """
-    2-opt:
-    new_cost = costoSolucion + costo(a,b) + costo(8,4) - costo(a,4) - costo(8,b)
-    r1: 1-2-3-a-4-5         r2: 1-6-7-b-8-9-10   -> ruta original
-    resultado:
-    r1: 1-2-3-a-b-8-9-10    r2: 1-6-7-4-5        -> 1ra opcion
-    r1: 1-2-3-8-9-10        r2: 1-6-7-b-a-4-5    -> 2da opcion
-    r: 1,2,a,3,4,b,5,6     -> ruta original 
-    resultado:
-    r: 1,2,a,b,4,3,5,6     -> 1ra opcion
-    r: 1,2,4,3,a,b,5,6     -> 2da opcion
-    """
-    def swap_2opt(self, arista_ini, ind_rutas, ind_A, rutas, opcion):
+    def swap_2opt(self, arista_ini, ind_rutas, ind_A, rutas, opcion):    
+        """
+        2-opt:
+        new_cost = costoSolucion + costo(a,b) + costo(8,4) - costo(a,4) - costo(8,b)
+        r1: 1-2-3-a-4-5         r2: 1-6-7-b-8-9-10   -> ruta original
+        resultado:
+        r1: 1-2-3-a-b-8-9-10    r2: 1-6-7-4-5        -> 1ra opcion
+        r1: 1-2-3-8-9-10        r2: 1-6-7-b-a-4-5    -> 2da opcion
+        r: 1,2,a,3,4,b,5,6     -> ruta original 
+        resultado:
+        r: 1,2,a,b,4,3,5,6     -> 1ra opcion
+        r: 1,2,4,3,a,b,5,6     -> 2da opcion
+        """
         costoSolucion = self.getCostoAsociado()
         ADD = []
         DROP = []
@@ -628,7 +640,6 @@ class Solucion(Grafo):
         aux._V = copy.copy(self._V)
         return aux
 
-    
     def evaluar_2opt(self, aristaIni, ind_rutas, ind_A, rutas):
         opcion = 0
         costo_solucion = float("inf")
@@ -829,23 +840,28 @@ class Solucion(Grafo):
             
         return costo_solucion, opcion, DROP, index_DROP
     
-    """
-    3-opt: (a,b)
-    r1: 1,2,3,a,4,5,6          r2: 1,7,8,b,9,10,11,12
-    resultado:
-    r1: 1,2,3,a,b,4,5,6          r2: 1,7,8,9,10,11,12       -> 1ra opcion
-    r1: 1,2,3,b,a,4,5,6          r2: 1,7,8,9,10,11,12       -> 2da opcion
-    r1: 1,2,3,4,5,6              r2: 1,7,8,a,b,9,10,11,12   -> 3ra opcion
-    r1: 1,2,3,4,5,6              r2: 1,7,8,b,a,9,10,11,12   -> 4ta opcion
-    r: 1,2,a,3,4,5,b,6,7,8      -> ruta original 
-    r: 1,2,a,b,3,4,5,6,7,8      -> 1ra opcion
-    r: 1,2,b,a,3,4,5,6,7,8      -> 2da opcion
-    r: 1,2,3,4,5,b,a,6,7,8      -> 3ra opcion
-    r: 1,2,3,4,5,a,b,6,7,8      -> 4ta opcion
-    """
     def evaluar_3opt(self, aristaIni, ind_rutas, ind_A, rutas):
+<<<<<<< HEAD
+        """
+        3-opt: (a,b)
+        r1: 1,2,3,a,4,5,6          r2: 1,7,8,b,9,10,11,12
+        resultado:
+        r1: 1,2,3,a,b,4,5,6          r2: 1,7,8,9,10,11,12       -> 1ra opcion
+        r1: 1,2,3,b,a,4,5,6          r2: 1,7,8,9,10,11,12       -> 2da opcion
+        r1: 1,2,3,4,5,6              r2: 1,7,8,a,b,9,10,11,12   -> 3ra opcion
+        r1: 1,2,3,4,5,6              r2: 1,7,8,b,a,9,10,11,12   -> 4ta opcion
+        r: 1,2,a,3,4,5,b,6,7,8      -> ruta original 
+        r: 1,2,a,b,3,4,5,6,7,8      -> 1ra opcion
+        r: 1,2,b,a,3,4,5,6,7,8      -> 2da opcion
+        r: 1,2,3,4,5,b,a,6,7,8      -> 3ra opcion
+        r: 1,2,3,4,5,a,b,6,7,8      -> 4ta opcion
+        """
+
+        sol_factible_12 = sol_factible_34 = False
+=======
         sol_factible_12 = False
         sol_factible_34 = False
+>>>>>>> c52b7d9387ef74651248599d32af4e24abc4b52a
         #Opcion: 0 (1ra opcion) | 1 (2da opcion) | 3 (3ra opcion) | 4 (4ta opcion)
         #Misma ruta: -1(1ra opcion) | -2 (2da opcion) | -3 (3ra opcion) | -4 (4ta opcion)
         opcion = 0  
@@ -1323,22 +1339,23 @@ class Solucion(Grafo):
         
         return rutas
     
-    """
-    4-opt: (a,b)
-    r1: 1,2,3,a,4,5,6        r2: 1,7,8,b,9,10,11,12
-    resultado:
-    r1: 1,2,3,a,b,5,6        r2: 1,7,8,4,9,10,11,12       -> 1ra opcion        
-    r1: 1,2,b,a,4,5,6        r2: 1,7,8,3,9,10,11,12       -> 2da opcion
-    r1: 1,2,3,9,4,5,6        r2: 1,7,8,b,a,10,11,12       -> 3ra opcion
-    r1: 1,2,3,8,4,5,6        r2: 1,7,a,b,9,10,11,12       -> 4ta opcion 
-    r: 1,2,3,a,4,5,6,b,7,8  -> Original
-    resultado:
-    r: 1,2,3,a,b,5,6,4,7,8  -> 1ra opcion
-    r: 1,2,b,a,4,5,3,6,7,8  -> 2da opcion        
-    r: 1,2,3,7,4,5,6,b,a,8  -> 3ra opcion
-    r: 1,2,3,6,4,5,a,b,7,8  -> 4ta opcion
-    """
     def evaluar_4opt(self, arista_ini, ind_rutas, ind_A, rutas):
+        """
+        4-opt: (a,b)
+        r1: 1,2,3,a,4,5,6        r2: 1,7,8,b,9,10,11,12
+        resultado:
+        r1: 1,2,3,a,b,5,6        r2: 1,7,8,4,9,10,11,12       -> 1ra opcion        
+        r1: 1,2,b,a,4,5,6        r2: 1,7,8,3,9,10,11,12       -> 2da opcion
+        r1: 1,2,3,9,4,5,6        r2: 1,7,8,b,a,10,11,12       -> 3ra opcion
+        r1: 1,2,3,8,4,5,6        r2: 1,7,a,b,9,10,11,12       -> 4ta opcion 
+        r: 1,2,3,a,4,5,6,b,7,8  -> Original
+        resultado:
+        r: 1,2,3,a,b,5,6,4,7,8  -> 1ra opcion
+        r: 1,2,b,a,4,5,3,6,7,8  -> 2da opcion        
+        r: 1,2,3,7,4,5,6,b,a,8  -> 3ra opcion
+        r: 1,2,3,6,4,5,a,b,7,8  -> 4ta opcion
+        """
+        
         opcion = 0
         costo_solucion = float("inf")
         aristaInicial = copy.deepcopy(arista_ini)
@@ -2031,3 +2048,576 @@ class Solucion(Grafo):
         else:
             rutasInfactibles = rutasInfactibles - set({indR1, indR2})
             return rutas, True, rutasInfactibles
+
+    def evaluar_Exchange(self, aristaIni, ind_rutas, ind_A, rutas):
+        """
+        Dos rutas distintas:
+            Rutas: 
+                r1: 1,2,3,a,4,5,6,7,1
+                r2: 1,8,9,10,b,11,12,1
+
+            Opción 1:
+                r1: 1,2,3,a,b,11,6,7,1
+                r2: 1,8,9,10,12,1
+            Opción 2:
+                r1: 1,2,3,10,b,a,4,11,6,7,1
+                r2: 1,8,9,11,12,1
+            Opción 3:
+                r1: 1,2,3,5,6,7,1
+                r2: 1,8,9,10,b,a,4,11,12,1
+            Opción 4:
+                r1: 1,2,4,5,6,7,1
+                r2: 1,8,9,10,3,a,b,11,12,1
+
+        Misma ruta:
+            Ruta:
+                r1: 1,2,3,a,4,5,6,7,8,b,9,10,11,1
+
+            Opción 1:
+                r1: 1,2,3,a,b,9,4,5,6,7,8,10,11,1
+            Opción 2:
+                r1: 1,2,3,8,b,a,4,5,6,7,9,10,11,1
+            Opción 3:
+                r1: 1,2,3,5,6,7,8,b,a,4,9,10,11,1
+            Opción 4:
+                r1: 1,2,4,5,6,7,8,3,a,b,9,10,11,1
+        """
+        
+
+        opciones = []
+        DROP = []
+        index_DROP = []
+        ADD = []
+        index_ADD = []
+
+        distintasRutas = True
+        ind_A[1]+=1
+        M = self._matrizDistancias
+        costoSolucion = float("inf")
+        opcionRet = 0
+        tam = len(self._matrizDistancias)
+        if ind_rutas[0]!=ind_rutas[1]:
+            r1 = rutas[ind_rutas[0]]
+            r2 = rutas[ind_rutas[1]]
+            nR1 = len(r1.getA())
+            nR2 = len(r2.getA())
+
+            if (0< ind_A[0] <nR1-1) and (0< ind_A[1] <nR2-2):
+                opciones.append(1)
+            if (1< ind_A[0] <nR1) and (2< ind_A[1] <nR2-1):
+                opciones.append(2)
+            if (0< ind_A[0] <nR1-2) and (0< ind_A[1] <nR2-1):
+                opciones.append(3)
+            if (2< ind_A[0] <nR1-1) and (1< ind_A[1] <nR2-1):
+                opciones.append(4)
+        else:
+            distintasRutas = False
+            r = rutas[ind_rutas[0]]
+            N = len(r.getA())
+            if (0<ind_A[0]) and (ind_A[0]+1<ind_A[1]<N-2):
+                opciones.append(1)
+            if (1<ind_A[0]) and (ind_A[0]+2<ind_A[1]<N-1):
+                opciones.append(2)
+            if (0<ind_A[0]) and (ind_A[0]+1<ind_A[1]<N-2):
+                opciones.append(3)
+            if (1<ind_A[0]) and (ind_A[0]+2<ind_A[1]<N-1):
+                opciones.append(4)
+
+        if distintasRutas:
+            for opcion in opciones:
+
+                aR1 = r1.getA()
+                aR2 = r2.getA()
+                                    
+                if opcion == 1:
+                    demandaR1 = r1.getCapacidad()
+                    b = aR2[ind_A[1]]
+                    sigB = aR2[ind_A[1]+1]
+                    demR1 = demandaR1 + b.getOrigen().getDemanda() + sigB.getOrigen().getDemanda()
+                    if demR1 > self.getCapacidadMax():
+                        continue
+                    a = aR1[ind_A[0]]
+                    sigA = aR1[ind_A[0]+1]
+                    antB = aR2[ind_A[1]-1]
+                    sigSigB = aR2[ind_A[1]+2]
+                elif opcion == 2:
+                    demandaR1 = r1.getCapacidad()
+                    b = aR2[ind_A[1]-1]
+                    sigB = aR2[ind_A[1]]
+                    demR1 = demandaR1 + b.getOrigen().getDemanda() + sigB.getOrigen().getDemanda()
+                    if demR1 > self.getCapacidadMax():
+                        continue
+                    a = aR1[ind_A[0]-1]
+                    sigA = aR1[ind_A[0]]
+                    antB = aR2[ind_A[1]-2]
+                    sigSigB = aR2[ind_A[1]+1]    
+                elif opcion == 3:
+                    demandaR1 = r2.getCapacidad()
+                    b = aR1[ind_A[0]]
+                    sigB = aR1[ind_A[0]+1]
+                    demR1 = demandaR1 + b.getOrigen().getDemanda() + sigB.getOrigen().getDemanda()
+                    if demR1 > self.getCapacidadMax():
+                        continue
+                    a = aR2[ind_A[1]]
+                    sigA = aR2[ind_A[1]+1]
+                    antB = aR1[ind_A[0]-1]
+                    sigSigB = aR1[ind_A[0]+2]                        
+                elif opcion == 4:
+                    demandaR1 = r2.getCapacidad()
+                    b = aR1[ind_A[0]-1]
+                    sigB = aR1[ind_A[0]]
+                    demR1 = demandaR1 + b.getOrigen().getDemanda() + sigB.getOrigen().getDemanda()
+                    if demR1 > self.getCapacidadMax():
+                        continue
+                    a = aR2[ind_A[1]-1]
+                    sigA = aR2[ind_A[1]]
+                    antB = aR1[ind_A[0]-2]
+                    sigSigB = aR1[ind_A[0]+1]    
+
+
+                costo = M[a.getOrigen().getValue()-1][b.getOrigen().getValue()-1]
+                ADD1 = Arista(a.getOrigen(),b.getOrigen(),costo, tam)
+                ADD1.setId(a.getOrigen().getValue()-1, b.getOrigen().getValue()-1, len(M))
+
+                costo = M[sigB.getOrigen().getValue()-1][sigA.getOrigen().getValue()-1]
+                ADD2 = Arista(sigB.getOrigen(),sigA.getOrigen(),costo, tam)
+                ADD2.setId(sigB.getOrigen().getValue()-1, sigA.getOrigen().getValue()-1, len(M))
+
+                costo = M[antB.getOrigen().getValue()-1][sigSigB.getOrigen().getValue()-1]
+                ADD3 = Arista(antB.getOrigen(),sigSigB.getOrigen(),costo, tam)
+                ADD3.setId(antB.getOrigen().getValue()-1, sigSigB.getOrigen().getValue()-1, len(M))
+                
+                costo = M[antB.getOrigen().getValue()-1][b.getOrigen().getValue()-1]
+                DROP1 = Arista(antB.getOrigen(),b.getOrigen(),costo, tam)
+                DROP1.setId(antB.getOrigen().getValue()-1, b.getOrigen().getValue()-1, len(M))
+
+                costo = M[sigB.getOrigen().getValue()-1][sigSigB.getOrigen().getValue()-1]
+                DROP2 = Arista(sigB.getOrigen(),sigSigB.getOrigen(),costo, tam)
+                DROP2.setId(sigB.getOrigen().getValue()-1, sigSigB.getOrigen().getValue()-1, len(M))
+
+                costo = M[a.getOrigen().getValue()-1][sigA.getOrigen().getValue()-1]
+                DROP3 = Arista(a.getOrigen(),sigA.getOrigen(),costo, tam)
+                DROP3.setId(a.getOrigen().getValue()-1, sigA.getOrigen().getValue()-1, len(M))
+                
+                costoNuevo = self.getCostoAsociado() + ADD1.getPeso() + ADD2.getPeso() + ADD3.getPeso() - DROP1.getPeso() - DROP2.getPeso() - DROP3.getPeso()
+
+                # print(f"opcion {opcion} => costo= {costoNuevo} ")
+                if(costoNuevo < costoSolucion):
+                    costoSolucion = costoNuevo
+                    opcionRet = opcion
+                    DROP = [DROP1,DROP2,DROP3]
+                    ADD = [ADD1,ADD2,ADD3]
+                    index_DROP = [DROP1.getId(), DROP2.getId(), DROP3.getId()]
+                    index_ADD = [ADD1.getId(), ADD2.getId(), ADD3.getId()]
+
+        else:
+            for opcion in opciones:
+
+                A = r.getA()
+                                               
+                if opcion == 1:
+                    a = A[ind_A[0]]
+                    sigA = A[ind_A[0]+1]
+                    antB = A[ind_A[1]-1]
+                    b = A[ind_A[1]]
+                    sigB = A[ind_A[1]+1]
+                    sigSigB = A[ind_A[1]+2]
+                elif opcion == 2: 
+                    a = A[ind_A[0]-1]
+                    sigA = A[ind_A[0]]
+                    antB = A[ind_A[1]-2]
+                    b = A[ind_A[1]-1]
+                    sigB = A[ind_A[1]]
+                    sigSigB = A[ind_A[1]+1]          
+                elif opcion == 3: 
+                    a = A[ind_A[1]]
+                    sigA = A[ind_A[1]+1]
+                    antB = A[ind_A[0]-1]
+                    b = A[ind_A[0]]
+                    sigB = A[ind_A[0]+1]
+                    sigSigB = A[ind_A[0]+2]     
+                elif opcion == 4: 
+                    a = A[ind_A[1]-1]
+                    sigA = A[ind_A[1]]
+                    antB = A[ind_A[0]-2]
+                    b = A[ind_A[0]-1]
+                    sigB = A[ind_A[0]]
+                    sigSigB = A[ind_A[0]+1]              
+
+                costo = M[a.getOrigen().getValue()-1][b.getOrigen().getValue()-1]
+                ADD1 = Arista(a.getOrigen(),b.getOrigen(),costo, tam)
+                ADD1.setId(a.getOrigen().getValue()-1, b.getOrigen().getValue()-1, len(M))
+
+                costo = M[sigB.getOrigen().getValue()-1][sigA.getOrigen().getValue()-1]
+                ADD2 = Arista(sigB.getOrigen(),sigA.getOrigen(),costo, tam)
+                ADD2.setId(sigB.getOrigen().getValue()-1, sigA.getOrigen().getValue()-1, len(M))
+
+                costo = M[antB.getOrigen().getValue()-1][sigSigB.getOrigen().getValue()-1]
+                ADD3 = Arista(antB.getOrigen(),sigSigB.getOrigen(),costo, tam)
+                ADD3.setId(antB.getOrigen().getValue()-1, sigSigB.getOrigen().getValue()-1, len(M))
+                
+                costo = M[antB.getOrigen().getValue()-1][b.getOrigen().getValue()-1]
+                DROP1 = Arista(antB.getOrigen(),b.getOrigen(),costo, tam)
+                DROP1.setId(antB.getOrigen().getValue()-1, b.getOrigen().getValue()-1, len(M))
+
+                costo = M[sigB.getOrigen().getValue()-1][sigSigB.getOrigen().getValue()-1]
+                DROP2 = Arista(sigB.getOrigen(),sigSigB.getOrigen(),costo, tam)
+                DROP2.setId(sigB.getOrigen().getValue()-1, sigSigB.getOrigen().getValue()-1, len(M))
+
+                costo = M[a.getOrigen().getValue()-1][sigA.getOrigen().getValue()-1]
+                DROP3 = Arista(a.getOrigen(),sigA.getOrigen(),costo, tam)
+                DROP3.setId(a.getOrigen().getValue()-1, sigA.getOrigen().getValue()-1, len(M))
+                
+                costoActual =self.getCostoAsociado()
+                costoNuevo = costoActual + ADD1.getPeso() + ADD2.getPeso() + ADD3.getPeso() - DROP1.getPeso() - DROP2.getPeso() - DROP3.getPeso()
+                # print(f"opcion {opcion} => costo= {costoNuevo} ")
+
+                if(costoNuevo < costoSolucion):
+                    costoSolucion = costoNuevo
+                    opcionRet = opcion
+                    DROP = [DROP1,DROP2,DROP3]
+                    ADD = [ADD1,ADD2,ADD3]
+                    index_DROP = [DROP1.getId(), DROP2.getId(), DROP3.getId()]
+                    index_ADD = [ADD1.getId(), ADD2.getId(), ADD3.getId()]
+
+        return costoSolucion, opcionRet, DROP, index_DROP
+
+    def swap_Exchange(self, arista_ini, ind_rutas, ind_A, rutas, opcion):
+        M = self._matrizDistancias
+        tam = len(self._matrizDistancias)
+        if(ind_rutas[0]!=ind_rutas[1]):
+            r1 = rutas[ind_rutas[0]]
+            r2 = rutas[ind_rutas[1]]
+            
+            aR1 = r1.getA()
+            aR2 = r2.getA()
+            ind_A[1]+=1
+            if opcion == 1 or opcion == 2:
+                if opcion == 1:
+                    pass
+                elif opcion == 2:
+                    ind_A[0]-=1
+                    ind_A[1]-=1
+
+                antA = aR1[ind_A[0]-1]
+                a = aR1[ind_A[0]]
+                sigA = aR1[ind_A[0]+1]
+                antB = aR2[ind_A[1]-1]
+                b = aR2[ind_A[1]]
+                sigB = aR2[ind_A[1]+1]
+                sigSigB = aR2[ind_A[1]+2]
+            elif opcion == 3 or opcion == 4:    
+
+                if opcion == 3:
+                    pass
+                elif opcion == 4:
+                    ind_A[0]-=1
+                    ind_A[1]-=1
+
+                antA = aR2[ind_A[1]-1]
+                a = aR2[ind_A[1]]
+                sigA = aR2[ind_A[1]+1]
+
+                antB = aR1[ind_A[0]-1]
+                b = aR1[ind_A[0]]
+                sigB = aR1[ind_A[0]+1]
+                sigSigB = aR1[ind_A[0]+2]
+
+
+            peso = M[a.getOrigen().getValue()-1][b.getOrigen().getValue()-1]
+            a = Arista(a.getOrigen(), b.getOrigen(), peso, tam)
+            peso = M[sigB.getOrigen().getValue()-1][sigA.getOrigen().getValue()-1]
+            sigB = Arista(sigB.getOrigen(), sigA.getOrigen(), peso, tam)
+            peso = M[antB.getOrigen().getValue()-1][sigSigB.getOrigen().getValue()-1]
+            antB = Arista(antB.getOrigen(), sigSigB.getOrigen(), peso, tam)
+            if opcion == 1 or opcion == 2:
+                aR1.insert(ind_A[0],a)
+                aR1.pop(ind_A[0]+1)
+                aR1.insert(ind_A[0]+1,b)
+                aR1.insert(ind_A[0]+2,sigB)
+                aR2.pop(ind_A[1])
+                aR2.pop(ind_A[1])
+                aR2.insert(ind_A[1]-1,antB)
+                aR2.pop(ind_A[1])
+            elif opcion == 3 or opcion == 4:
+                aR2.insert(ind_A[1],a)
+                aR2.pop(ind_A[1]+1)
+                aR2.insert(ind_A[1]+1,b)
+                aR2.insert(ind_A[1]+2,sigB)
+                aR1.pop(ind_A[0])
+                aR1.pop(ind_A[0])
+                aR1.insert(ind_A[0]-1,antB)
+                aR1.pop(ind_A[0])
+            cap1 = r1.cargarDesdeAristas(r1.getA())
+            cap2 = r2.cargarDesdeAristas(r2.getA())
+            r1.setCapacidad(cap1)
+            r2.setCapacidad(cap2)
+        else:
+            r = rutas[ind_rutas[0]]
+            A = r.getA()
+            ind_A[1]+=1
+            if opcion == 1 or opcion == 2:
+                if opcion == 1:
+                    pass
+                elif opcion == 2:
+                    ind_A[0]-=1
+                    ind_A[1]-=1
+                    
+                a = A[ind_A[0]]
+                sigA = A[ind_A[0]+1]
+                antB = A[ind_A[1]-1]
+                b = A[ind_A[1]]
+                sigB = A[ind_A[1]+1]
+                sigSigB = A[ind_A[1]+2]
+
+                peso = M[a.getOrigen().getValue()-1][b.getOrigen().getValue()-1]
+                a = Arista(a.getOrigen(),b.getOrigen(),peso, tam)
+                peso = M[sigB.getOrigen().getValue()-1][sigA.getOrigen().getValue()-1]
+                sigB = Arista(sigB.getOrigen(),sigA.getOrigen(),peso, tam)
+                peso = M[antB.getOrigen().getValue()-1][sigSigB.getOrigen().getValue()-1]
+                antB = Arista(antB.getOrigen(),sigSigB.getOrigen(),peso, tam)
+
+                A.insert(ind_A[0],a)
+                A.pop(ind_A[0]+1)
+                A.insert(ind_A[0]+1,b)
+                A.insert(ind_A[0]+2,sigB)
+                A.pop(ind_A[1]+2)
+                A.pop(ind_A[1]+2)
+                A.insert(ind_A[1]+1,antB)
+                A.pop(ind_A[1]+2)
+            elif opcion == 3 or opcion == 4:    
+                if opcion == 3:
+                    pass
+                elif opcion == 4:
+                    ind_A[0]-=1
+                    ind_A[1]-=1
+
+                antA = A[ind_A[1]-1]
+                a = A[ind_A[1]]
+                sigA = A[ind_A[1]+1]
+
+                antB = A[ind_A[0]-1]
+                b = A[ind_A[0]]
+                sigB = A[ind_A[0]+1]
+                sigSigB = A[ind_A[0]+2]
+
+                peso = M[a.getOrigen().getValue()-1][b.getOrigen().getValue()-1]
+                a = Arista(a.getOrigen(),b.getOrigen(),peso, tam)
+                peso = M[sigB.getOrigen().getValue()-1][sigA.getOrigen().getValue()-1]
+                sigB = Arista(sigB.getOrigen(),sigA.getOrigen(),peso, tam)
+                peso = M[antB.getOrigen().getValue()-1][sigSigB.getOrigen().getValue()-1]
+                antB = Arista(antB.getOrigen(),sigSigB.getOrigen(),peso, tam)
+
+                A.insert(ind_A[1],a)
+                A.pop(ind_A[1]+1)
+                A.insert(ind_A[1]+1,b)
+                A.insert(ind_A[1]+2,sigB)
+                A.pop(ind_A[0])
+                A.pop(ind_A[0])
+                A.insert(ind_A[0]-1,antB)
+                A.pop(ind_A[0])
+
+
+            r.cargarDesdeAristas(A)
+
+        return rutas
+
+    def eliminarRutasSobrantes(self, rutas, nroVehiculos, capacidad):
+        """ La idea sería:
+                1)Elegir como ruta sobrante, la que tenga menos vértices, si hay más de una, ordenarlas de
+                forma ascendiente, con respecto a la cantidad de elementos. En variable RS --> por rutas sobrantes
+                2)Las demás rutas, se las ordena de forma descendiente, según su capacidad. En variable RF --> por rutas factibles
+                3)Repetir hasta que la/s ruta/s sobrantes estén vacías.
+                    1)Por cada elemento de RS. Recorrer todas las rutas de RF y ver en cuales se puede agregar, las rutas en la
+                    que se pueda agregar se las agrega a la lista RC --> por rutas candidatas.
+                        Si |RC| == 0
+                            depurarEspacioEnRutas() --> es otra función, este sería el peor de los casos.
+                            intentar de nuevo a ver si se lo puede agregar en alguna ruta. Si no se puede, a llorar a Magoya
+                        Si no
+                            Buscar la ubicación de menor costo para el elemento en la RC.
+        """
+        indRS = self.rutasSobrantes(rutas, nroVehiculos)
+        RS = [rutas[i] for i in indRS]
+        RF = [rutas[i] for i in range(len(rutas)) if i not in indRS]
+        RF = self.rutasDemandaOrdenada(RF)
+        for rutaSobrante in RS:
+            verticesRuta, indiceV = self.demandasOrdenadas(rutaSobrante, desc=True, index=True)
+            verticesRuta = verticesRuta[:-1]
+            indiceV = indiceV[:-1]
+            while len(verticesRuta)!=0:
+                capacidadNecesaria = capacidad - verticesRuta[0].getDemanda()
+                RC = self.rutasConCapacidadDisponible(RF, capacidadNecesaria)
+                if len(RC) == 0:
+                    self.depurarRutas(RF, capacidadNecesaria, capacidad)
+                    RC = self.rutasConCapacidadDisponible(RF, capacidadNecesaria)
+                if len(RC) != 0:
+                    self.insertarEnMejorUbicacion(verticesRuta[0], indiceV[0], rutaSobrante,RC)
+                    verticesRuta, indiceV = self.demandasOrdenadas(rutaSobrante, desc=True, index=True)
+                    verticesRuta = verticesRuta[:-1]
+                    indiceV = indiceV[:-1]
+        for i in indRS:
+            rutas.pop(i)
+        for x in rutas:
+            x.cargarDesdeSecuenciaDeVertices(x.getV())
+        
+        print(rutas)
+        return rutas
+
+    def depurarRutas(self, rutas, cantidadNecesaria, capacidad):
+        """
+            1) Buscar la ruta que más espacio disponible tenga, guardar en variable rutaConMasEspacio
+            2) Armar una lista de vértices, ordenando ascendentemente según la demanda, en variable verticesDemandaDesc
+            3) Hasta que la demanda de la ruta sea menor a la cantidadNecesaria
+                Sea x el vértice de menor demanda de verticesConMenosDemanda
+                1) Armar una lista con todas las posibles rutas donde se pueda insertar a x.
+                    Si la lista está vacía:
+                        Se sigue con el siguiente vértice x.
+                    Si no:
+                        Se busca la mejor ubicación para insertar x.
+        """
+        i = 0
+        demandaRutaActual = float("inf")
+        while i < len(rutas) and demandaRutaActual >= cantidadNecesaria:
+            #rutaConMasEspacio = self.rutasDemandaOrdenada(rutas)[:i+1][0]
+            rutaConMasEspacio, indRutaConMasEspacio = self.rutasMasDivisibles(rutas)
+            rutaConMasEspacio = rutaConMasEspacio[:i+1][0]
+            indRutaConMasEspacio = indRutaConMasEspacio[:i+1][0]
+            rutasRestantes = [rutas[r] for r in range(len(rutas)) if r != indRutaConMasEspacio]
+            demandaRutaActual = rutaConMasEspacio.getCapacidad()
+            verticesDemandaDesc, indicesV = self.demandasOrdenadas(rutaConMasEspacio, desc=True, index=True)
+            verticesDemandaDesc = verticesDemandaDesc[:-1]
+            indicesV = indicesV[:-1]
+            seguir = True
+            while len(verticesDemandaDesc) != 0 and demandaRutaActual >= cantidadNecesaria and seguir:
+                x = verticesDemandaDesc.pop()
+                j = indicesV.pop()
+                RC = self.rutasConCapacidadDisponible(rutasRestantes, capacidad - x.getDemanda())
+                if len(RC) == 0:
+                    seguir = False
+                else:
+                    self.insertarEnMejorUbicacion(x, j, rutaConMasEspacio, RC)
+                    verticesDemandaDesc, indicesV = self.demandasOrdenadas(rutaConMasEspacio, desc=True, index=True)
+                    verticesDemandaDesc = verticesDemandaDesc[:-1]
+                    indicesV = indicesV[:-1]
+                    demandaRutaActual = rutaConMasEspacio.getCapacidad()
+            i += 1
+
+    def rutasMasDivisibles(self, rutas):
+        """ Si, algo feo el nombre de la función. Pendiente, buscar un mejor nombre
+            Esta función va a retornar una lista de rutas con sus respectivos índicas
+            ordenadas según la cantidad de vértices con menor demandañ
+            Se ordena las rutas por según el valor del primer cuartil.
+            Las que tengan el primer cuartil más bajo, tienen clientes
+            con menor demanda.
+        """
+        rutasConVerticesOrdenados = [self.demandasOrdenadas(r) for r in rutas] #Ordenados por demanda
+        Q = [] #Indices del primer cuartil de cada ruta
+        i = 0
+        for r in rutasConVerticesOrdenados:
+            n = len(r[1:])
+            indices = list(range(1,n+1))
+            if n % 2:
+                indMed = int((indices[int(n/2)] + indices[int(n/2) + 1])/2)
+                mediana = r[indMed]
+                indPriCuartil = int((indices[int(n/4)] + indices[int(n/4) + 1])/2)
+            else:
+                indMed = int(n/2) + 1 
+                mediana = r[indMed]
+                indPriCuartil = int(n/4) + 1
+            q = (i, r[indPriCuartil].getDemanda(), indPriCuartil)
+            Q.append(q)
+            i+=1
+        Q = sorted(Q, key=lambda x: x[1])
+
+        ret = [rutas[q[0]] for q in Q]
+        ind = [q[0] for q in Q]
+        [print("Ruta " + str(q[2]) + " --> primer cuartil: " + str(q[1]) + "\n") for q in Q]
+        return ret, ind
+
+    def rutasDemandaOrdenada(self, rutas, desc=False):
+        """ Retorna las rutas ordenadas descendientemente por demanda """
+        return sorted(rutas, key=lambda x: x.getCapacidad(), reverse=False)
+
+    def insertarEnMejorUbicacion(self, v, ind, ruta, rutas):
+        """ Inserta el vértice v buscando la ubicación con menor costo en las rutas dadas.
+            También se elimina a v de su ubiación anterior (ruta)
+        """
+        indMejorUbicacion = 1
+        indMejorRuta = 0
+        costoMin = float("inf")
+        M = self._matrizDistancias
+        for r in range(len(rutas)):
+            verticesRuta = rutas[r].getV()
+            for i in range(len(verticesRuta)):
+                if i < len(verticesRuta):
+                    costo = M[i][v.getValue()-1] + M[i+1][v.getValue()-1]
+                else:
+                    costo = M[i][v.getValue()-1] + M[1][v.getValue()-1]
+                if costo <= costoMin:
+                    costoMin = costo
+                    indMejorUbicacion = i
+                    indMejorRuta = r
+        print(costoMin)
+
+        ruta.getV().pop(ind) #Es 1 para no borrar el depósito
+        ruta.setCapacidad(ruta.getCapacidad() - v.getDemanda())
+        rutas[indMejorRuta].getV().insert(indMejorUbicacion+1, v)
+        rutas[indMejorRuta].setCapacidad(rutas[indMejorRuta].getCapacidad() + v.getDemanda())
+
+    def demandasOrdenadas(self, ruta, desc=False, index=False):
+        """Retorna una lista con los vértices de la ruta ordenados ascendentemente, retorna los indices"""
+        if index:
+            ind = list(range(len(ruta)))
+            indices = sorted(ind, key=lambda x: ruta.getV()[x].getDemanda(), reverse=desc)
+            vert = [ruta.getV()[r] for r in indices]
+            return vert,indices
+        else:
+            return sorted(ruta.getV(), key=lambda x: x.getDemanda(), reverse=desc)
+
+    def rutasConCapacidadDisponible(self, rutas, capacidadNecesaria):
+        """Retorna una lista con rutas que tienen la capacidad necesaria"""
+        return [r for r in rutas if r.getCapacidad() <= capacidadNecesaria]
+
+    def rutasSobrantes(self, rutas, nroVehiculos):
+        """ Retorna los/s índice/s de las ruta/s con menos demanda dependiendo de cuantas sobren
+            Con "sobrar" me refiero a que la cantidad de rutas sobrepasa la cantidad de vehículos mínima
+        """
+        cantidadSobrante = len(rutas) - nroVehiculos 
+        if cantidadSobrante > 0:
+            ind = []
+            indicesRutas = list(range(len(rutas)))
+            for i in range(cantidadSobrante):
+                jMin = 0
+                minimo = float("inf")
+                for j in indicesRutas:
+                    if(rutas[j].getCapacidad() < minimo):
+                        jMin = j
+                        minimo = rutas[j].getCapacidad()
+                ind.append(jMin)
+                indicesRutas.pop(jMin)
+            return ind
+        else:
+            return []
+
+    def sizeOf(self, obj):
+        tam = sys.getsizeof(obj)
+        k = 1000
+        print(tam)
+        if tam> k**3:
+            print(str(int(tam/(k**3))) + " GB y"+str(tam%(k**3))+" MB's")
+        elif tam> k**2:
+            print(str(int(tam/(k**2))) + " MB y"+str(tam%(k**2))+" KB's")
+        elif tam >= k**1:
+            print(str(int(tam/(k**1)))+ " KB y"+str(tam%(k**1))+" bytes")
+        else:
+            print(str(tam) + " Bytes")
+
+    def controlaCapacidad(self, rutas, capMax):
+        for r in rutas:
+            print(r.getCapacidad())
+            if r.getCapacidad() > r.__capacidadMax:
+                print("SUPERO CAPACIDAD")
+                return False
+        return True
+
+
