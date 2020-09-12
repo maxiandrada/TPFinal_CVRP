@@ -12,9 +12,11 @@ import numpy as np
 from clsTxt import clsTxt
 from time import time
 import datetime
+import DB
+import json
 
 class CVRP:
-    def __init__(self, M, D, nroV, capac, archivo, carpeta, solI, tADD, tDROP, tiempo, porcentaje, optimo):
+    def __init__(self, M, D, nroV, capac, archivo, carpeta, solI, tADD, tDROP, tiempo, porcentaje, optimo, coord = None, idInstancia = None):
         self._G = Grafo(M, D)                #Grafo original
         self.__S = Solucion(M, D, sum(D))    #Solucion general del CVRP
         self.__Distancias = M                #Mareiz de distancias
@@ -44,7 +46,19 @@ class CVRP:
         self.__S = self.cargaSolucion(self.__rutas)
         #print("tiempo carga solucion: ", time()-tiempoIni)
         self.c = None
-        self.tabuSearch()
+        if coord is not None:
+            self.coordenadas = coord
+        if idInstancia is not None:
+            self.idInstancia = idInstancia
+        self.conn = DB.DB()
+        #self.tabuSearch()
+        self.swaps = [0]*4
+
+    def getRutas(self):
+        return self.__rutas
+
+    def setHilo(self,H):
+        self.hilo = H
 
     #Escribe los datos iniciales: el grafo inicial y la demanda
     def escribirDatos(self):
@@ -95,6 +109,10 @@ class CVRP:
         # print(f"cargaSolucion: {time()-t}")
         return S
 
+    def enviarRutasHilo(self,rutas,indRutas=None):
+        if indRutas is None:
+            return self.hilo.signals.rutaLista.emit(rutas)
+        return self.hilo.signals.ruta.emit({'rutas':rutas,"indRutas": indRutas})
 
     #Umbral de granularidad: phi = Beta*(c/(n+k))
     #Beta = 1  parametro de dispersion. Sirve para modificar el grafo disperso para incluir la diversificación y la intensificación
@@ -130,7 +148,6 @@ class CVRP:
         nueva_solucion = solucion_refer
         nuevo_costo = self.__S.getCostoAsociado()
         
-        #Atributos de tiempo e iteraciones
         tiempoIni = time()
         tiempoMax = float(self.__tiempoMaxEjec*60)
         tiempoEstancamiento = tiempoIni
@@ -211,18 +228,18 @@ class CVRP:
                 #tiempoEjecucion = time()
                 #print("Tiempo carga solucion: ", (tiempoEjecucion - tiempoInicial))
                 
-                if(nuevo_costo != nueva_solucion.getCostoAsociado()):
-                    print("\n\nERROR!!!!!!")
-                    print("ADD: "+str(aristasADD)+"     DROP: "+str(aristasDROP)+"\n\n")
-                    print("nueva solucion:"+str(nueva_solucion.getV()))
-                    print("solucion refer:"+str(solucion_refer.getV()))
+                # if(nuevo_costo != nueva_solucion.getCostoAsociado()):
+                #     print("\n\nERROR!!!!!!")
+                #     print("ADD: "+str(aristasADD)+"     DROP: "+str(aristasDROP)+"\n\n")
+                #     print("nueva solucion:"+str(nueva_solucion.getV()))
+                #     print("solucion refer:"+str(solucion_refer.getV()))
                     
-                    print("\nRutas ahora")
-                    for i in range(0, len(rutas_refer)):
-                        x = rutas_refer[i]
-                        print("ruta #%d: %s" %(i, str(x.getV())))
-                    print("nuevo costo: ", nuevo_costo,"          getCostoAsociado: ", nueva_solucion.getCostoAsociado())
-                    a = 1/0
+                #     print("\nRutas ahora")
+                #     for i in range(0, len(rutas_refer)):
+                #         x = rutas_refer[i]
+                #         print("ruta #%d: %s" %(i, str(x.getV())))
+                #     print("nuevo costo: ", nuevo_costo,"          getCostoAsociado: ", nueva_solucion.getCostoAsociado())
+                #     a = 1/0
                 
                 solucion_refer = nueva_solucion
                 rutas_refer = nuevas_rutas
@@ -412,6 +429,47 @@ class CVRP:
 
         #Fin del while. Imprimo los valores obtenidos
         self.escribirDatosFinales(tiempoIni, iterac, tiempoEstancamiento)
+        self.enviarRutasHilo(rutas_refer)
+        t = time()
+        print("inicio carga base de datos")
+        #self.datosParaDB(iterac,tiempoEjecuc)
+        print(f"tiempo en cargar en DB: {time()-t}")
+
+    def datosParaDB(self, iterac,tiempo):
+        s = self
+        optimoEncontrado = self.__S.getCostoAsociado()
+        porcentaje = optimoEncontrado/self.__optimo -1.0
+        resolucion = (
+            iterac,
+            optimoEncontrado,
+            s.__tenureADD,
+            s.__tenureDROP,
+            porcentaje*100,
+            tiempo,
+            json.dumps(s.swaps),
+            s.__tipoSolucionIni
+            )
+        idResolucion = DB.insert_resolucion(self.conn,resolucion)
+        DB.insert_resolucionXInstancia(self.conn,(idResolucion,self.idInstancia))
+        idSoluciones = []
+        for i in range(len(self.__optimosLocales)):
+            t = time()
+            costo = sum([c.getCostoAsociado() for c in self.__optimosLocales[i]])
+            rutas = []
+            for r in self.__optimosLocales[i]:
+                rutas.append(str(r.getV()))
+            S = (
+                costo,
+                json.dumps(rutas),
+                json.dumps(self.__swapOptimoLocal[i]),
+                self.__iteracionOptimoLocal[i],
+                )
+            idSol = DB.insert_solucion(self.conn, S)
+            idSoluciones.append(idSol)
+        
+        for j in idSoluciones:
+            DB.insert_solucionXResolucion(self.conn, (idResolucion,j))
+        
 
     def getPermitidos(self, Aristas, umbral, solucion):
         AristasNuevas = []
@@ -437,6 +495,8 @@ class CVRP:
         ind_permitidos = np.unique(ind_permitidos)
 
         return ind_permitidos
+
+
 
     #Decrementa el Tenure en caso de que no sea igual a -1. Si luego de decrementar es 0, lo elimino de la lista tabu
     def decrementaTenure(self, lista_tabu, ind_permitidos):
@@ -673,3 +733,14 @@ class CVRP:
         self.__txt.escribir("Tiempo de estancamiento: "+str(int(tiempoTotal/60))+"min "+str(int(tiempoTotal%60))+"seg")
         self.__txt.imprimir()
 
+
+    def contarSwaps(self,k_Opt):
+        swap = k_Opt[0]
+        if(swap == 2):
+            self.swaps[0]+=1
+        elif(swap == 3):
+            self.swaps[1]+=1
+        elif(swap == 4):
+            self.swaps[2]+=1
+        elif(swap == 5):
+            self.swaps[3]+=1
