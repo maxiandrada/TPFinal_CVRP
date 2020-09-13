@@ -40,7 +40,7 @@ class Grafo:
         return self._demandaAcumulada
     
     def cargarDesdeAristas(self, A):
-        t = time()
+        #t = time()
         self._A = A
         V = []
         cap = 0
@@ -291,7 +291,7 @@ class Grafo:
 
     #Para que cargue desde una secuencia de vertices por ej. s1= [1,3,4,5,8,9,6,7] -> s2=[1,3,9,5,8,4,6,7]
     def cargarDesdeSecuenciaDeVertices(self,seq:list):
-        t = time()
+        #t = time()
         self._V = seq
         if(len(self._A)!=0):
             self._A = []
