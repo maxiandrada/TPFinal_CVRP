@@ -467,7 +467,7 @@ class Solucion(Grafo):
             ADD = DROP = []
         
         return costoSolucion, [kOpt, tipo_kOpt], indRutas, indAristas, ADD, DROP
-
+    
     def evaluar_2opt(self, aristaIni, ind_rutas, ind_A, rutas):
         opcion = 0
         costo_solucion = float("inf")
@@ -2055,9 +2055,11 @@ class Solucion(Grafo):
             Opción 4:
                 r1: 1,2,4,5,6,7,1
                 r2: 1,8,9,10,3,a,b,11,12,1
+
         Misma ruta:
             Ruta:
                 r1: 1,2,3,a,4,5,6,7,8,b,9,10,11,1
+
             Opción 1:
                 r1: 1,2,3,a,b,9,4,5,6,7,8,10,11,1
             Opción 2:
