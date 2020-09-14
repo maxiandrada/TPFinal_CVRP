@@ -342,7 +342,7 @@ class CVRPparalelo:
                 ###############
             #Si se estancó nuevamente, tomamos la proxima sol peor o la penultima de los optimos locales
             elif(iteracEstancamiento > iteracEstancMax and len(self.__optimosLocales) >= indOptimosLocales*(-1)):
-                cad = "\n+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+- Iteracion %d  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-\n" %(iterac)
+                cad = "\n+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+- Iteracion %d nodo %d +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-\n" %(iterac, self.__rank)
                 self.__txt.escribir(cad)
                 nuevas_rutas = self.__optimosLocales[indOptimosLocales]
                 nueva_solucion = self.cargaSolucion(nuevas_rutas)
@@ -386,7 +386,7 @@ class CVRPparalelo:
                 contEstanOpt += 1
 
             elif iteracEstancamiento >iteracEstancMax and len(self.__solPR) > 0 and contEstanOpt > cantMaxEstancOpt and False:
-                cad = "\n+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+- Iteracion %d  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-\n" %(iterac)
+                cad = "\n+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+- Iteracion %d nodo %d +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-\n" %(iterac, self.__rank)
                 self.__txt.escribir(cad)
                 if self.__c is None:
                     print ("Parámetros: %d OL, %d SPR. El nodo %d busca nueva solucion para PATH RELINKING"%(len(self.__optimosLocales), len(self.__solPR), self.__rank))
@@ -449,7 +449,7 @@ class CVRPparalelo:
 
             #Si se vuelve a estancar a pesar de usar Path Relinking, admitimos la primera nueva solucion
             elif(iteracEstancamiento > iteracEstancMax):
-                cad = "\n+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+- Iteracion %d  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-\n" %(iterac)
+                cad = "\n+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+- Iteracion %d nodo %d +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-\n" %(iterac, self.__rank)
                 self.__txt.escribir(cad)
                 cad = "Se estancó durante %d min %d seg. Admitimos una solucion peor para diversificar en nodo %d" %(int(tiempoTotal/60), int(tiempoTotal%60),self.__rank)
                 print(cad + "-->    Costo: "+str(costo))
@@ -509,7 +509,8 @@ class CVRPparalelo:
             tiempoEjecuc = time()-tiempoIni
             iterac += 1
             iteracEstancamiento += 1
-
+        if not bandera:
+            print ("SE ENCONTRÓ UNA SOLUCIÓN CON UN DESVÍO MENOR AL "+str( round(self.__porcentajeParada*100,2) )+"%")
         #Fin del while. Imprimo los valores obtenidos
         self.escribirDatosFinales(tiempoIni, iterac, tiempoEstancamiento)
         

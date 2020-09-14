@@ -170,8 +170,10 @@ rank = comm.Get_rank()
 if rank == 0:
     nroVehiculos, optimo, capacidad, matrizDist, demandas = cargarDesdeFile2(direccion)
 
-    tenureADD = int(len(matrizDist)**(1/2.0))
-    tenureDROP = int(len(matrizDist)**(1/2.0))+1
+    # tenureADD = int(len(matrizDist)**(1/2.0))
+    # tenureDROP = int(len(matrizDist)**(1/2.0))+1
+    tenureADD = 4
+    tenureDROP = 4
     solucionInicial = 0
     time = sys.argv[2]
     cvrp = CVRPparalelo(
@@ -208,8 +210,10 @@ else:
     demandas = dic['demandas']
     rutas = dic['solInicial']
 
-    tenureADD = int(len(matrizDist)**(1/2.0))
-    tenureDROP = int(len(matrizDist)**(1/2.0))+1
+    # tenureADD = int(len(matrizDist)**(1/2.0))
+    # tenureDROP = int(len(matrizDist)**(1/2.0))+1
+    tenureADD = 4
+    tenureDROP = 4
     solucionInicial = 0
     time = sys.argv[2]
     print("Creando Instancias CVRP en nodo ", rank)
@@ -223,7 +227,7 @@ else:
         tenureADD, 
         tenureDROP, 
         time, 
-        0.1, 
+        1.0, 
         optimo,
         rutasIniciales=rutas,
         rank = rank)
