@@ -295,6 +295,7 @@ class CVRPparalelo:
                     
                     self.__S = nueva_solucion
                     self.__rutas = nuevas_rutas
+                    print (self.__rutas)
                     self.__beta = 1
                     tiempoEstancamiento = time()
                     if(len(self.__optimosLocales) >= 20):
