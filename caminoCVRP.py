@@ -27,7 +27,24 @@ class camino():
             S.setCapacidadMax(self.__capacidad)
             rutas.append(S)
         self.generaCamino()
+        self.chequeaConsistencia(self.__s)
         return rutas
+
+    def chequeaConsistencia(self, sol):
+        v = 2
+        inconsistente = False
+        while v < len(self.__matrizDistancias) and not inconsistente:
+            cont = 0
+            for ruta in sol:
+                if v in ruta:
+                    cont += 1
+            if not cont == 1:
+                inconsistente = True
+                print ("Algo anda mal con path relinking ")
+                print (str(sol))
+                raise Exception("SolucionesInfactibles")
+            else:
+                v += 1
 
     def setSol(self, s, g):
         if not (self.chequeaFactibilidad(s) and self.chequeaFactibilidad(g)):
@@ -46,6 +63,16 @@ class camino():
         while i < len(p) and self.__chequeaFactibilidadRuta(p[i]):
             i+=1
         return False if i < len(p) else True
+
+    def __chequeaFactibilidadRuta(self, ruta):
+        acu = 0.0
+        # print (str(ruta))
+        # cad = "acu = "
+        for i in range(len(ruta)):
+            acu += self.__demandas[ruta[i]-1]
+            # cad += str(self.__demandas[ruta[i]-1])
+        # print (cad)
+        return False if acu > self.__capacidad else True
 
     def igualesTam(self):
         i = 0
@@ -141,16 +168,6 @@ class camino():
         else:
             # # print ("Ya llegamos a la solución guía")
             return []
-
-    def __chequeaFactibilidadRuta(self, ruta):
-        acu = 0.0
-        # print (str(ruta))
-        # cad = "acu = "
-        for i in range(len(ruta)):
-            acu += self.__demandas[ruta[i]-1]
-            # cad += str(self.__demandas[ruta[i]-1])
-        # print (cad)
-        return False if acu > self.__capacidad else True
 
     def incIndS(self, indS):
         ind = copy.deepcopy(indS)

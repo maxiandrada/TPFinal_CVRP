@@ -173,3 +173,4 @@ tenureADD = int(len(matrizDist)**(1/2.0))
 tenureDROP = int(len(matrizDist)**(1/2.0))+1
 time = sys.argv[2]
 cvrp = CVRP(matrizDist, demandas, nroVehiculos, capacidad, nombre+"_"+str(time)+"min", 'secuencial_', 0, tenureADD, tenureDROP, time, 0, optimo)
+cvrp.tabuSearch()

@@ -24,12 +24,11 @@ class CVRPparalelo:
         self.__contSol = 0
         self.__solPR = []
         self.__c = None
-
-
         self._G = Grafo(M, D)                #Grafo original
         self.__S = Solucion(M, D, sum(D))    #Solucion general del CVRP
         self.__Distancias = M                #Mareiz de distancias
         self.__Demandas = D                  #Demandas de los clientes
+        print (str(self.__Demandas))
         self.__capacidadMax = capac          #Capacidad max por vehiculo
         self.__rutas = []                    #Soluciones por vehiculo (lista de soluciones)
         self.__nroVehiculos = nroV           #Nro de vehiculos disponibles
@@ -144,7 +143,7 @@ class CVRPparalelo:
             fila = []
             # # print("V: "+str(r.getV()))
             if(r.getCapacidad()>self.__capacidadMax):    #Condición para controlar errores
-                print("Nodo %d. Cap. sRutas: "+str(r.getCapacidad())+"<<<<<<<<<<<<<<<<<<<<<<<< ERROR !"%(self.__rank))
+                print("Nodo %d. Cap. sRutas: %s <<<<<<<<<<<<<<<<<<<<<<<< ERROR !"%(self.__rank, str(r.getCapacidad())))
                 print(r)
                 assert r.getCapacidad()>self.__capacidadMax
             for v in r.getV():
@@ -208,7 +207,7 @@ class CVRPparalelo:
         bandera = True #Bandera para forzar detención de ejecución
         condMPIopt = True
         contEstanOpt = 0
-        cantMaxEstancOpt = 10
+        cantMaxEstancOpt = 5
         cantMaxPR = 7
         cantPR = 0
 
@@ -316,7 +315,7 @@ class CVRPparalelo:
                 cond_Optimiz = True
                 # Aristas = Aristas_Opt
                 if len(self.__solPR) > 0 and contEstanOpt > cantMaxEstancOpt:
-                    #print ("NODO %d ENCONTRÓ UNA SOLUCIÓN PATH RELINKING"%(self.__rank))
+                    # print ("NODO %d ENCONTRÓ UNA SOLUCIÓN PATH RELINKING"%(self.__rank))
                     iteracEstancamiento = 0
                     iteracEstancMax = 20
                 else:
@@ -385,7 +384,7 @@ class CVRPparalelo:
                 self.__beta = 2
                 contEstanOpt += 1
 
-            elif iteracEstancamiento >iteracEstancMax and len(self.__solPR) > 0 and contEstanOpt > cantMaxEstancOpt and False:
+            elif iteracEstancamiento >iteracEstancMax and len(self.__solPR) > 0 and contEstanOpt > cantMaxEstancOpt:
                 cad = "\n+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+- Iteracion %d nodo %d +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-\n" %(iterac, self.__rank)
                 self.__txt.escribir(cad)
                 if self.__c is None:
@@ -396,20 +395,40 @@ class CVRPparalelo:
                     gInt = self.getListaRutas(gRutas)
                     self.__c = camino(sInt , gInt, self.__Demandas, self.__capacidadMax, self.__Distancias)
                     pr = ""
+                    pr+=str(sInt)+"\n"
+                    nuevas_rutas = self.__c.pathRelinking()
+                    pr+=str(nuevas_rutas)+"\n"
+                    nueva_solucion = self.cargaSolucion(nuevas_rutas)
+
+                    costo = nueva_solucion.getCostoAsociado()
+                    tiempoTotal = time()-tiempoEstancamiento
+                    cad = "Se estancó durante %d min %d seg. Admitimos una solución %d de PATH RELINKING en nodo %d " %(int(tiempoTotal/60), int(tiempoTotal%60), cantPR, self.__rank)
+                    print(cad + "-->    Costo: "+str(costo))
+                    
+                    lista_tabu = []
+                    ind_permitidos = ind_AristasOpt
+                    umbral = self.calculaUmbral(costo)
+                    solucion_refer = nueva_solucion
+                    rutas_refer = nuevas_rutas
+                    # Aristas = Aristas_Opt
+                    iteracEstancamiento = 0
+                    iteracEstancMax = 5
+                    self.__beta = 2
+                    cantPR += 1
                 else: 
                     if self.__c.iguales():
                         print ("Parámetros: %d OL, %d SPR. El nodo %d busca nueva solucion para PATH RELINKING"%(len(self.__optimosLocales), len(self.__solPR), self.__rank))
                         pr += str(gInt)
                         #print (pr)
                         i=0
-                        sRutas = copy.deepcopy(self.__optimosLocales[i])
+                        sRutas = self.__optimosLocales[i]
                         gRutas = self.__solPR.pop(-1)
                         sInt = self.getListaRutas(sRutas)
                         gInt = self.getListaRutas(gRutas)
                         self.__c.setSol(sInt , gInt)
                         pr = str(sInt)+"\n"
                         while self.__c.iguales() and i<len(self.__optimosLocales):
-                            sRutas = copy.deepcopy(self.__optimosLocales[i])
+                            sRutas = self.__optimosLocales[i]
                             sInt = self.getListaRutas(sRutas)
                             self.__c.setSol(sInt , gInt)
                             i+=1

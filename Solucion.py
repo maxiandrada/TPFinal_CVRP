@@ -841,10 +841,6 @@ class Solucion(Grafo):
         return costo_solucion, opcion, DROP, index_DROP
     
     def evaluar_3opt(self, aristaIni, ind_rutas, ind_A, rutas):
-<<<<<<< HEAD
-        sol_factible_12 = False
-        sol_factible_34 = False
-=======
         """
         3-opt: (a,b)
         r1: 1,2,3,a,4,5,6          r2: 1,7,8,b,9,10,11,12
@@ -861,7 +857,6 @@ class Solucion(Grafo):
         """
 
         sol_factible_12 = sol_factible_34 = False
->>>>>>> master
         #Opcion: 0 (1ra opcion) | 1 (2da opcion) | 3 (3ra opcion) | 4 (4ta opcion)
         #Misma ruta: -1(1ra opcion) | -2 (2da opcion) | -3 (3ra opcion) | -4 (4ta opcion)
         opcion = 0  
