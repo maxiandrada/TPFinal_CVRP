@@ -132,6 +132,7 @@ class Ventana(tk.Tk):
                         self.__nombreArchivo+"_"+str(self.__eTime[i].get())+"min", self.__myFolder, self.getSolucionInicial(self.__eSolInicial[i].get()),
                         self.__boxADD[i].get(), self.__boxDROP[i].get(), self.__eTime[i].get(), self.__ePorcentaje[i].get(), self.__optimo[i])
                 j
+                self.__cvrp.tabuSearch()
 
     def getSolucionInicial(self,value):
         return self.__combo1list.index(value)
