@@ -27,8 +27,8 @@ class CVRPparalelo:
         self._G = Grafo(M, D)                #Grafo original
         self.__S = Solucion(M, D, sum(D))    #Solucion general del CVRP
         self.__Distancias = M                #Mareiz de distancias
+        [print (str(self.__Distancias[i])) for i in range(len(M))]
         self.__Demandas = D                  #Demandas de los clientes
-        print (str(self.__Demandas))
         self.__capacidadMax = capac          #Capacidad max por vehiculo
         self.__rutas = []                    #Soluciones por vehiculo (lista de soluciones)
         self.__nroVehiculos = nroV           #Nro de vehiculos disponibles
@@ -210,7 +210,6 @@ class CVRPparalelo:
         cantMaxEstancOpt = 5
         cantMaxPR = 7
         cantPR = 0
-        condEstancPathRelinking = True
 
 
         while(tiempoEjecuc < tiempoMax and bandera): #bandera para forzar detención de todos los nodos
@@ -296,7 +295,7 @@ class CVRPparalelo:
                     
                     self.__S = nueva_solucion
                     self.__rutas = nuevas_rutas
-                    print (self.__rutas)
+                    # print (self.__rutas)
                     self.__beta = 1
                     tiempoEstancamiento = time()
                     if(len(self.__optimosLocales) >= 20):
@@ -365,7 +364,6 @@ class CVRPparalelo:
                 iteracEstancMax = 100
                 self.__beta = 3
                 contEstanOpt += 1
-                condPathRelinking = True
             #CONDICION PARA MPI. Si se estancó y el pool de soluciones tiene elementos entonces partimos de ahi
             elif(iteracEstancamiento > iteracEstancMax and len(self.__poolSol) > 0):
                 nuevas_rutas = self.__poolSol.pop(len(self.__poolSol)-1)
@@ -386,43 +384,62 @@ class CVRPparalelo:
                 iteracEstancMax = 100
                 self.__beta = 2
                 contEstanOpt += 1
-                # condPathRelinking = True
+
             elif iteracEstancamiento >iteracEstancMax and len(self.__solPR) > 0 and contEstanOpt > cantMaxEstancOpt:
-                cad = "\n+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+- Iteracion %d nodo %d +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-\n" %(iterac, self.__rank)
+                cad = "\n+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+- Iteracion %d nodo %d PRALE+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-\n" %(iterac, self.__rank)
                 self.__txt.escribir(cad)
-                if condEstancPathRelinking:
-                    S = self.__solPR.pop(-1)
-                    G = copy.deepcopy(self.__optimosLocales[-1])
-                
-                nuevas_rutas = self.pathRelinking(S, G)
-                if(nuevas_rutas == []):
-                    condEstancPathRelinking = True
+                if self.__c is None:
+                    print ("Parámetros: %d OL, %d SPR. El nodo %d busca nueva solucion para PATH RELINKING"%(len(self.__optimosLocales), len(self.__solPR), self.__rank))
+                    sRutas = copy.deepcopy(self.__optimosLocales[-1])
+                    gRutas = self.__solPR.pop(-1)
+                    sInt = self.getListaRutas(sRutas)
+                    gInt = self.getListaRutas(gRutas)
+                    self.__c = camino(sInt , gInt, self.__Demandas, self.__capacidadMax, self.__Distancias)
+                if self.__c.iguales():
+                    print ("Parámetros: %d OL, %d SPR. El nodo %d busca nueva solucion para PATH RELINKING"%(len(self.__optimosLocales), len(self.__solPR), self.__rank))
+                    i=0
+                    sRutas = copy.deepcopy(self.__optimosLocales[i])
+                    gRutas = self.__solPR.pop(-1)
+                    sInt = self.getListaRutas(sRutas)
+                    gInt = self.getListaRutas(gRutas)
+                    self.__c.setSol(sInt , gInt)
+                    while self.__c.iguales() and i<len(self.__optimosLocales):
+                        sRutas = copy.deepcopy(self.__optimosLocales[i])
+                        sInt = self.getListaRutas(sRutas)
+                        self.__c.setSol(sInt , gInt)
+                        i+=1
+                    if self.__c.iguales():
+                        print ("El nodo %d se estancó en PATH RELINKING. Saliendo!!"%(self.__rank))
+                    else:
+                        print ("El nodo %d encontró nueva sol y guia para PATH RELINKING"%(self.__rank))
+                    nuevas_rutas = self.__optimosLocales[-1]
                     contEstanOpt = 0
-                    nuevas_rutas = self.__solPR.pop(-1)
-                    nueva_solucion = self.cargaSolucion(nuevas_rutas)
-                    costo = nueva_solucion.getCostoAsociado()
-                    tiempoTotal = time()-tiempoEstancamiento
-                    cad = "Se estancó en Path Relinking durante %d min %d seg en NODO %d. Partimos de otra solucion inicial" %(int(tiempoTotal/60), int(tiempoTotal%60), self.__rank)
+                    cantPR = 0
                 else:
-                    condEstancPathRelinking = False
-                    nueva_solucion = self.cargaSolucion(nuevas_rutas)
-                    costo = nueva_solucion.getCostoAsociado()
-                    tiempoTotal = time()-tiempoEstancamiento
-                    cad = "Se estancó durante %d min %d seg en NODO %d. Aplicamos path relinking para admitir otro optimo local" %(int(tiempoTotal/60), int(tiempoTotal%60), self.__rank)
-                
+                    if cantPR < cantMaxPR:
+                        nuevas_rutas = self.__c.pathRelinking()
+                        cantPR += 1
+                    else:
+                        nuevas_rutas = self.__optimosLocales[-1]
+                        contEstanOpt = 0
+                        cantPR = 0
+
+                tiempoTotal = time()-tiempoEstancamiento
+                cad = "Se estancó durante %d min %d seg. Admitimos una solución %d de PATH RELINKING en nodo %d " %(int(tiempoTotal/60), int(tiempoTotal%60), cantPR, self.__rank)
                 print(cad + "-->    Costo: "+str(costo))
-                self.__txt.escribir("\n"+cad)
+                nueva_solucion = self.cargaSolucion(nuevas_rutas)
+                costo = nueva_solucion.getCostoAsociado()
+                
                 lista_tabu = []
                 ind_permitidos = ind_AristasOpt
-                self.__beta = 1
-                self.__umbralMin = 0
                 umbral = self.calculaUmbral(costo)
                 solucion_refer = nueva_solucion
                 rutas_refer = nuevas_rutas
-                cond_Optimiz = True
                 # Aristas = Aristas_Opt
-                iteracEstancamiento = 1
-                iteracEstancMax = 100
+                iteracEstancamiento = 0
+                iteracEstancMax = 10
+                self.__beta = 2
+                cond_Optimiz = True
             #Si se vuelve a estancar a pesar de usar Path Relinking, admitimos la primera nueva solucion
             elif(iteracEstancamiento > iteracEstancMax):
                 cad = "\n+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+- Iteracion %d nodo %d +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-\n" %(iterac, self.__rank)
@@ -449,7 +466,6 @@ class CVRPparalelo:
                 # Aristas = Aristas_Opt
                 iteracEstancMax = 300
                 contEstanOpt+=1
-                # condPathRelinking = True
             #Si se terminaron los permitidos
             elif(ind_permitidos == []):
                 cad = "\n+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+- Iteracion %d nodo %d +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-\n" %(iterac, self.__rank)
@@ -495,10 +511,9 @@ class CVRPparalelo:
         if cond:
             nroIntercambios +=1
             print ("Intercambio %d con %f de dif. de tiempo <<<<--------------------------------------- MPI nodo %d <<<<---------------------------------"%(nroIntercambios, (time()-tCoord)-self.__tiempoMPI, self.__rank))
-            print ("Nodo %d entró allgather"%(self.__rank))
+            
             delay = (time()-tCoord)-self.__tiempoMPI
             listaS = self.__comm.allgather((self.__S, self.__rank, self.__rutas, delay, self.__contSol, self.__optimosLocales[-1], bandera)) #solucion_refer, Aristas, lista_tabu, nueva_solucion, ind_permitidos, ind_permitidos, self.__rutas, Aristas, lista_tabu, ind_permitidos, rutas_refer, self._G, nueva_solucion
-            print ("Nodo %d salió allgather"%(self.__rank))
             bandera = False not in [t[6] for t in listaS]   #si no hay False en la lista entonces los nodos siguen ejecutando
             for z in listaS:
                 if not self.__rank == z[1]:

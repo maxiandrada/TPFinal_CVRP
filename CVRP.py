@@ -161,7 +161,7 @@ class CVRP:
         cond_Optimiz = True
         cond_Estancamiento = False
         condPathRelinking = False
-        condEstancPathRelinking = True
+        condEstancPathRelinking = True  # para saber si hay que buscar nuevas soluciones guía e inicial
         
         tiempo = time()
         Aristas_Opt = np.array([], dtype = object)
@@ -406,6 +406,7 @@ class CVRP:
                 # Aristas = Aristas_Opt
                 umbral = self.calculaUmbral(costo)
             else:
+                print ("<<<<<<<<<<<-------------------------------------- ENTRÓ POR ELSE RARO")
                 nuevas_rutas = rutas_refer
                 nueva_solucion = solucion_refer
 
@@ -630,7 +631,7 @@ class CVRP:
         
         return [] if indDistTam == -1 and igualRec else S
 
-    #Son de iguales Tamaño y/o Recorrido
+    #Son de iguales Tamaño y/o Recorrido (ale: Calcula a partir de que ruta son de distinto tamaño >:V)
     def igualesTam(self, S, G, indDistTam):
         i = 0
         
