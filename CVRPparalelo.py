@@ -144,7 +144,6 @@ class CVRPparalelo:
             # # print("V: "+str(r.getV()))
             if(r.getCapacidad()>self.__capacidadMax):    #Condición para controlar errores
                 print("Nodo %d. Cap. sRutas: %s <<<<<<<<<<<<<<<<<<<<<<<< ERROR !"%(self.__rank, str(r.getCapacidad())))
-                print(r)
                 assert r.getCapacidad()>self.__capacidadMax
             for v in r.getV():
                 fila.append(v.getValue())
@@ -199,7 +198,7 @@ class CVRPparalelo:
         print("Costo sol Inicial: "+str(self.__S.getCostoAsociado())+"      ==> Optimo: "+str(self.__optimo)+"  Desvio: "+str(round(porcentaje*100,3))+"%")
         
 
-        cantIntercambios = 20
+        cantIntercambios = int(self.__tiempoMaxEjec*2)
         self.__tiempoMPI = tiempoMax / cantIntercambios
         tCoord = time()
         nroIntercambios = 0
@@ -249,25 +248,14 @@ class CVRPparalelo:
             tenureDROP = self.__tenureDROP
             
             costoSolucion = self.__S.getCostoAsociado()
-            
-            # if condPathRelinking:
-            #     print("Sol refer: ", solucion_refer)
-            #     print("Mejor sol: ", costoSolucion)
 
             #Si encontramos una mejor solucion que la tomada como referencia
             if(nuevo_costo < solucion_refer.getCostoAsociado() and aristasADD != []):
                 cad = "\n+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+- Iteracion %d Nodo %d +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-\n" %(iterac,self.rank)
                 self.__txt.escribir(cad)
 
-                #tiempoInicial = time()
                 nuevas_rutas = nueva_solucion.swap(k_Opt, aristasADD[0], rutas_refer, indRutas, indAristas)
-                #tiempoEjecucion = time()
-                #print("Tiempo swap: ", (tiempoEjecucion - tiempoInicial))
-                
-                #tiempoInicial = time()
                 nueva_solucion = self.cargaSolucion(nuevas_rutas)
-                #tiempoEjecucion = time()
-                #print("Tiempo carga solucion: ", (tiempoEjecucion - tiempoInicial))
                 
                 if(nuevo_costo != nueva_solucion.getCostoAsociado()):
                     print("\n\nERROR!!!!!!")
@@ -296,7 +284,6 @@ class CVRPparalelo:
                     
                     self.__S = nueva_solucion
                     self.__rutas = nuevas_rutas
-                    print (self.__rutas)
                     self.__beta = 1
                     tiempoEstancamiento = time()
                     if(len(self.__optimosLocales) >= 20):
@@ -338,9 +325,6 @@ class CVRPparalelo:
                 contEstanOpt += 1
                 # Aristas = Aristas_Opt
 
-                ###############
-                #condPathRelinking = True
-                ###############
             #Si se estancó nuevamente, tomamos la proxima sol peor o la penultima de los optimos locales
             elif(iteracEstancamiento > iteracEstancMax and len(self.__optimosLocales) >= indOptimosLocales*(-1)):
                 cad = "\n+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+- Iteracion %d nodo %d +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-\n" %(iterac, self.__rank)
@@ -365,7 +349,6 @@ class CVRPparalelo:
                 iteracEstancMax = 100
                 self.__beta = 3
                 contEstanOpt += 1
-                condPathRelinking = True
             #CONDICION PARA MPI. Si se estancó y el pool de soluciones tiene elementos entonces partimos de ahi
             elif(iteracEstancamiento > iteracEstancMax and len(self.__poolSol) > 0):
                 nuevas_rutas = self.__poolSol.pop(len(self.__poolSol)-1)
@@ -386,7 +369,6 @@ class CVRPparalelo:
                 iteracEstancMax = 100
                 self.__beta = 2
                 contEstanOpt += 1
-                # condPathRelinking = True
             elif iteracEstancamiento >iteracEstancMax and len(self.__solPR) > 0 and contEstanOpt > cantMaxEstancOpt:
                 cad = "\n+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+- Iteracion %d nodo %d +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-\n" %(iterac, self.__rank)
                 self.__txt.escribir(cad)
@@ -402,7 +384,7 @@ class CVRPparalelo:
                     nueva_solucion = self.cargaSolucion(nuevas_rutas)
                     costo = nueva_solucion.getCostoAsociado()
                     tiempoTotal = time()-tiempoEstancamiento
-                    cad = "Se estancó en Path Relinking durante %d min %d seg en NODO %d. Partimos de otra solucion inicial" %(int(tiempoTotal/60), int(tiempoTotal%60), self.__rank)
+                    cad = "Se estancó en Path Relinking durante %d min %d seg en NODO %d. Partimos de otra solucion inicial    " %(int(tiempoTotal/60), int(tiempoTotal%60), self.__rank)
                 else:
                     condEstancPathRelinking = False
                     nueva_solucion = self.cargaSolucion(nuevas_rutas)
@@ -449,7 +431,6 @@ class CVRPparalelo:
                 # Aristas = Aristas_Opt
                 iteracEstancMax = 300
                 contEstanOpt+=1
-                # condPathRelinking = True
             #Si se terminaron los permitidos
             elif(ind_permitidos == []):
                 cad = "\n+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+- Iteracion %d nodo %d +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-\n" %(iterac, self.__rank)
@@ -487,7 +468,7 @@ class CVRPparalelo:
             iterac += 1
             iteracEstancamiento += 1
         if not bandera:
-            print ("SE ENCONTRÓ UNA SOLUCIÓN CON UN DESVÍO MENOR AL "+str( round(self.__porcentajeParada*100,2) )+"%")
+            print ("SE ENCONTRÓ UNA SOLUCIÓN CON UN DESVÍO MENOR AL "+str( round(self.__porcentajeParada) )+"%")
         #Fin del while. Imprimo los valores obtenidos
         self.escribirDatosFinales(tiempoIni, iterac, tiempoEstancamiento)
         
@@ -495,10 +476,8 @@ class CVRPparalelo:
         if cond:
             nroIntercambios +=1
             print ("Intercambio %d con %f de dif. de tiempo <<<<--------------------------------------- MPI nodo %d <<<<---------------------------------"%(nroIntercambios, (time()-tCoord)-self.__tiempoMPI, self.__rank))
-            print ("Nodo %d entró allgather"%(self.__rank))
             delay = (time()-tCoord)-self.__tiempoMPI
             listaS = self.__comm.allgather((self.__S, self.__rank, self.__rutas, delay, self.__contSol, self.__optimosLocales[-1], bandera)) #solucion_refer, Aristas, lista_tabu, nueva_solucion, ind_permitidos, ind_permitidos, self.__rutas, Aristas, lista_tabu, ind_permitidos, rutas_refer, self._G, nueva_solucion
-            print ("Nodo %d salió allgather"%(self.__rank))
             bandera = False not in [t[6] for t in listaS]   #si no hay False en la lista entonces los nodos siguen ejecutando
             for z in listaS:
                 if not self.__rank == z[1]:
@@ -631,23 +610,20 @@ class CVRPparalelo:
         indG = [0,1]
         newS = []
         rutasInfactibles = set()
-        # print("G: "+str(G))
-        # print("S: "+str(S)+"\n")
         indDistTam = self.igualesTam(S, G, indDistTam)
-        while not esFactible:
-            if not igualRec:
-                igualRec, indS, indG = self.igualesRec(S, G, indS, indG)
+        
+        if not igualRec:
+            igualRec, indS, indG = self.igualesRec(S, G, indS, indG)
             
+        while not esFactible:    
             #No son de igual recorrido
             if not igualRec:
                 V_S = S[indS[0]].getV()
                 V_G = G[indG[0]].getV()
-                #print("No son de igual recorrido")
                 sigIndS = self.buscarSigVertice(S, G[indG[0]].getV()[indG[1]])
                 
                 #Si los vertices a cambiar de S pertenecen a la misma ruta
                 if sigIndS[0] == indS[0]:
-                    #print("Pertenecen a la misma ruta")
                     aristaAux = copy.copy(V_S[indS[1]])
                     V_S[indS[1]] = V_G[indG[1]]
                     V_S[sigIndS[1]] = aristaAux
@@ -655,42 +631,42 @@ class CVRPparalelo:
                     S[indS[0]].setCapacidad(capS)
                     if rutasInfactibles == set():
                         esFactible = True
-                    #print("new S: "+str(S))
+                
                 #No pertenecen a la misma ruta
                 else:
-                    #print("No pertenecen a la misma ruta")
                     newS, esFactible, rutasInfactibles = self.__S.swap_4optPR(indS[0], sigIndS[0], indS[1], sigIndS[1], S, rutasInfactibles)
+                    
                     if esFactible and rutasInfactibles == set():
                         esFactible = True
                         S = newS
-                        #print("new S: "+str(S))
                     else:
                         esFactible = False
-                    #print("new S: "+str(S))
+                    
+                igualRec, indS, indG = self.igualesRec(S, G, indS, indG)
             
-                # print("S: "+str(S))
             #Son de igual recorrido
-            else:
-                indDistTam = self.igualesTam(S, G, indDistTam)
+            else:          
                 if rutasInfactibles == set():
                     esFactible = True
 
                 if indDistTam == -1:
-                    # print("Son de igual tamaño y recorrido")
                     esFactible = True
                     break
 
                 ind = indDistTam
                 V_S = S[ind].getV()
-                V_sigS = S[ind+1].getV()
+                proxInd = ind+1
+                V_sigS = S[proxInd].getV()
                 
                 #S: 1-2-3       1-4-5-6-7
                 #G: 1-2-3-4-5   1-6-7
                 if len(G[ind].getV()) > len(S[ind].getV()):
+                    while len(V_sigS) == 1:
+                        proxInd+=1
+                        V_sigS = S[proxInd].getV()
                     aristaAux = V_sigS.pop(1)
                     V_S.append(aristaAux)
-                elif len(G[ind].getV()) == len(S[ind].getV()):
-                    a = 1/0
+                
                 #S: 1-2-3-4-5  1-6-7
                 #G: 1-2-3      1-4-5-6-7
                 else:
@@ -700,8 +676,8 @@ class CVRPparalelo:
                 capS = S[ind].cargarDesdeSecuenciaDeVertices(V_S)
                 S[ind].setCapacidad(capS)
                 
-                capSigS = S[ind+1].cargarDesdeSecuenciaDeVertices(V_sigS)
-                S[ind+1].setCapacidad(capSigS)
+                capSigS = S[proxInd].cargarDesdeSecuenciaDeVertices(V_sigS)
+                S[proxInd].setCapacidad(capSigS)
                 
                 if capS > self.__capacidadMax or capSigS > self.__capacidadMax:
                     if capS > self.__capacidadMax:
@@ -715,12 +691,10 @@ class CVRPparalelo:
                         rutasInfactibles = rutasInfactibles - set({ind+1})
                 else:
                     rutasInfactibles = rutasInfactibles - set({ind, ind+1})
+                
+                indDistTam = self.igualesTam(S, G, indDistTam)
 
-            #print("S: "+str(S))
-        # for s in S:
-        #     print("S_V: "+str(s.getV())+"       Cap: "+str(s.getCapacidad()))
-        
-        return [] if indDistTam == -1 and igualRec else S
+        return [] if (indDistTam == -1 and igualRec) else S
 
     #Son de iguales Tamaño y/o Recorrido
     def igualesTam(self, S, G, indDistTam):
