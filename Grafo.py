@@ -274,11 +274,11 @@ class Grafo:
                 aux = Arista(Vertice(fila+1, Demanda[fila]),Vertice(columna+1, Demanda[columna]),(Matriz[fila][columna]))
                 aux.setId(fila, columna, len(Matriz))
                 self._A.append(aux)
-                #aux = Arista(self._V[fila],self._V[columna],(Matriz[fila][columna]))
-                #aux.setId(fila, columna, len(Matriz))
-                #self._A.append(aux)
-                #if(columna!=fila and columna>fila):
-                #    self._AristasUnicas.append(aux)
+                # aux = Arista(self._V[fila], self._V[columna], (Matriz[fila][columna]))
+                # aux.setId(fila, columna, len(Matriz))
+                # self._A.append(aux)
+                if(columna!=fila and columna>fila):
+                   self._AristasUnicas.append(aux)
 
     def getVerticeInicio(self):
         return self._A[0].getOrigen()

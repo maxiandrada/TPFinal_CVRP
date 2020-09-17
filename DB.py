@@ -174,6 +174,20 @@ def select_instancia(conn,instanciaId):
     filas = cur.fetchall()
     return filas
 
+
+
+def select_instanciaCompletaXSet(conn,setId):
+    sql =   f'''SELECT *
+                FROM Instancias 
+                INNER JOIN InstanciasXSet ON InstanciasXSet.instanciaId = Instancias.instanciaId
+                WHERE setId = {setId}'''
+    cur = conn.cursor()
+    cur.execute(sql)
+    filas = cur.fetchall()
+    return filas
+
+
+
 def select_instanciaXSet(conn,setId):
     sql =   f'''select Instancias.instanciaId,instanciaName,cantidadClientes,nroVehiculos,capacidad,optimoConocido
                 from Instancias INNER  JOIN InstanciasXSet ON InstanciasXSet.instanciaId = Instancias.instanciaId
@@ -189,7 +203,16 @@ def select_sets(conn):
     cur.execute(sql)
     filas = cur.fetchall()
     return filas
-    
+   
+def select_sets_con_nombre(conn, nombre):
+    sql = f"SELECT * FROM Sets WHERE setName={nombre}"
+    cur = conn.cursor()
+    cur.execute(sql)
+    filas = cur.fetchall()
+    return filas
+
+
+
 def select_soluciones(conn, solucionId=None):
     if solucionId is None:
         sql = """select * from Soluciones"""
@@ -201,7 +224,7 @@ def select_soluciones(conn, solucionId=None):
     return filas
 
 def select_solucionesXResolucion(conn,resolucionId):
-    sql =   f'''select Soluciones.solucionId,costo,rutas,origen,iteraciones
+    sql =   f'''select Soluciones.solucionId,costo,rutas,origen,iteracion
                 from Soluciones INNER  JOIN solucionXresolucion ON solucionXresolucion.solucionId = Soluciones.solucionId
                 WHERE resolucionId = {resolucionId}'''
     cur = conn.cursor()
@@ -228,8 +251,33 @@ def select_resolucionesXInstancia(conn,instanciaId):
     filas = cur.fetchall()
     return filas
 
+def select_reporte_total(conn, instanciaId):
+    sql = """
+        SELECT
+            instanciaName,
+            nroVehiculos,
+            cantidadClientes,
+            optimoEncontrado,
+            AVG(optimoEncontrado),
+            MAX(optimoEncontrado),
+            optimoConocido,
+            AVG(porcentajeError),
+            COUNT(*)
+        FROM
+            Instancias INNER JOIN resolucionesXInstancia
+            ON Instancias.instanciaId = resolucionesXInstancia.instanciaId
+            INNER JOIN Resoluciones
+            ON resolucionesXInstancia.resolucionId = Resoluciones.resolucionId
+        WHERE
+            Instancias.instanciaId = %s
+        GROUP BY
+            instanciaName
+        """%instanciaId
+    cur = conn.cursor()
+    cur.execute(sql)
+    filas = cur.fetchall()
+    return filas
 
 
-
-if __name__ == '__main__':
+if  __name__ == '__main__':
     DB()

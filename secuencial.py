@@ -169,8 +169,8 @@ direccion = sys.argv[1]
 nombre = os.path.basename(direccion)
 
 nroVehiculos, optimo, capacidad, matrizDist, demandas = cargarDesdeFile2(direccion)
-tenureADD = 20
-tenureDROP = 20
+tenureADD = 1
+tenureDROP = 2
 time = sys.argv[2]
 cvrp = CVRP(matrizDist, demandas, nroVehiculos, capacidad, nombre+"_"+str(time)+"min", 'secuencial_', 0, tenureADD, tenureDROP, time, 0, optimo)
 cvrp.tabuSearch()

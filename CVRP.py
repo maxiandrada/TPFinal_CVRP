@@ -16,7 +16,7 @@ import DB
 import json
 
 class CVRP:
-    def __init__(self, M, D, nroV, capac, archivo, carpeta, solI, tADD, tDROP, tiempo, porcentaje, optimo, coord = None, idInstancia = None):
+    def __init__(self, M, D, nroV, capac, archivo, carpeta, solI, tADD, tDROP, tiempo, porcentaje, optimo, cargarEnDB = None, idInstancia = None):
         self.__solInicial = ['Clark & Wright', 'Vecino cercano', 'Secuencial', 'Al azar']
         self._G = Grafo(M, D)                #Grafo original
         self.__S = Solucion(M, D, sum(D))    #Solucion general del CVRP
@@ -49,8 +49,7 @@ class CVRP:
         
         #print("tiempo carga solucion: ", time()-tiempoIni)
         self.c = None
-        if coord is not None:
-            self.coordenadas = coord
+
         if idInstancia is not None:
             self.idInstancia = idInstancia
         self.conn = DB.DB()
@@ -58,6 +57,10 @@ class CVRP:
         self.swaps = [0]*4
         self.__swapOptimoLocal = []          #tipo de swapo que usó para el óptimo local N
         self.__iteracionOptimoLocal = []          #iteración en la que se encontró el optimo local
+        if cargarEnDB is None:
+            self.cargarEnDB = False
+        else:
+            self.cargarEnDB = cargarEnDB
 
     def getRutas(self):
         return self.__rutas
@@ -224,11 +227,9 @@ class CVRP:
                     tiempoTotal = time()-tiempoEstancamiento
                     tiempoEstancamiento = time()
 
-                    if(len(self.__optimosLocales) >= 20):
-                        self.__optimosLocales.pop(0)
-
-
+                
                     self.almacenarOptimoLocal(nuevas_rutas,iterac,k_Opt)
+                    self.contarSwaps(k_Opt)
                     indOptimosLocales = -2
                     cond_Estancamiento = False
                     condPathRelinking = False
@@ -330,6 +331,8 @@ class CVRP:
                 print("Se estancó durante %d min %d seg. Tomamos la primera solucion peor" %(int(tiempoTotal/60), int(tiempoTotal%60)))
                 
                 nuevas_rutas = nueva_solucion.swap(k_Opt, aristasADD[0], rutas_refer, indRutas, indAristas)
+                self.contarSwaps(k_Opt)
+
                 nueva_solucion, strText = self.cargaSolucion(nuevas_rutas)
                 rutas_refer = nuevas_rutas
                 solucion_refer = nueva_solucion
@@ -350,6 +353,7 @@ class CVRP:
                 cad += "Se terminaron los permitidos"
                 self.__txt.escribir(cad)
                 nuevas_rutas = nueva_solucion.swap(k_Opt, aristasADD[0], rutas_refer, indRutas, indAristas)
+                self.contarSwaps(k_Opt)
                 nueva_solucion, strText = self.cargaSolucion(nuevas_rutas)
                 self.__txt.escribir(strText)
                 solucion_refer = nueva_solucion
@@ -386,11 +390,12 @@ class CVRP:
         #Fin del while. Imprimo los valores obtenidos
         self.escribirDatosFinales(tiempoIni, iterac, tiempoEstancamiento)
         
-        self.enviarRutasHilo(rutas_refer)
-        t = time()
-        print("inicio carga base de datos")
-        self.datosParaDB(iterac,tiempoEjecuc)
-        print(f"tiempo en cargar en DB: {time()-t}")
+        if(self.cargarEnDB):
+            self.enviarRutasHilo(rutas_refer)
+            t = time()
+            print("inicio carga base de datos")
+            self.datosParaDB(iterac,tiempoEjecuc)
+            print(f"tiempo en cargar en DB: {time()-t}")
 
     def datosParaDB(self, iterac,tiempo):
         s = self
