@@ -91,13 +91,17 @@ class Solucion(Grafo):
                     if len(rutas) > nroVehiculos:
                         self.eliminarRutasSobrantes(rutas, nroVehiculos, capacidad)
                     
-                    sol_factible = True
+                    if rutas != []:
+                        sol_factible = True
+                    else:
+                        strSolInicial = 3
 
             elif(strSolInicial==1):
                 print("Sol Inicial por Vecino Cercano...")
                 sol_factible = self.solInicial_VecinoCercano(nroVehiculos, capacidad, demandas, rutas,G)
                 #print(rutas)
-                rutas = self.cargarRutas(rutas, capacidad,G)
+                if sol_factible:
+                    rutas = self.cargarRutas(rutas, capacidad,G)
                 # if not sol_factible:
                 #     self.eliminarRutasSobrantes(rutas, nroVehiculos, capacidad)
                 
@@ -352,17 +356,17 @@ class Solucion(Grafo):
                 _lambda = 0.1 
                 mu = 2
                 ni = 2 
-                rutas = []
-            elif(iteracion < 3):
-                _lambda += 0.5
-                mu -= 0.1
-                ni -= 0.1
-                rutas = []
-            else:
-                _lambda += 0.1
-                mu -= 0.1
-                ni -= 0.1
-            iteracion +=1
+            #     rutas = []
+            # elif(iteracion < 2):
+            #     _lambda += 0.5
+            #     mu -= 0.1
+            #     ni -= 0.1
+            #     rutas = []
+            # else:
+            #     _lambda += 0.1
+            #     mu -= 0.1
+            #     ni -= 0.1
+            # iteracion +=1
 
         print("tiempo clarke wright ", time()-t)
         return rutas, _lambda, mu, ni, iteracion
@@ -2456,7 +2460,10 @@ class Solucion(Grafo):
         RS = [rutas[i] for i in indRS]
         RF = [rutas[i] for i in range(len(rutas)) if i not in indRS]
         RF = self.rutasDemandaOrdenada(RF)
+        iterac = 0
+
         for rutaSobrante in RS:
+            iterac += 1
             verticesRuta, indiceV = self.demandasOrdenadas(rutaSobrante, desc=True, index=True)
             verticesRuta = verticesRuta[:-1]
             indiceV = indiceV[:-1]
@@ -2471,12 +2478,18 @@ class Solucion(Grafo):
                     verticesRuta, indiceV = self.demandasOrdenadas(rutaSobrante, desc=True, index=True)
                     verticesRuta = verticesRuta[:-1]
                     indiceV = indiceV[:-1]
+
+            if iterac > 10:
+                rutas = []
+                return rutas
+
         for i in indRS:
             rutas.pop(i)
         for x in rutas:
             x.cargarDesdeSecuenciaDeVertices(x.getV())
         
-        print(rutas)
+        #print(rutas)
+
         return rutas
 
     def depurarRutas(self, rutas, cantidadNecesaria, capacidad):
@@ -2574,7 +2587,7 @@ class Solucion(Grafo):
                     costoMin = costo
                     indMejorUbicacion = i
                     indMejorRuta = r
-        print(costoMin)
+        #print(costoMin)
 
         ruta.getV().pop(ind) #Es 1 para no borrar el depósito
         ruta.setCapacidad(ruta.getCapacidad() - v.getDemanda())
@@ -2619,7 +2632,7 @@ class Solucion(Grafo):
     def sizeOf(self, obj):
         tam = sys.getsizeof(obj)
         k = 1000
-        print(tam)
+        #print(tam)
         if tam> k**3:
             print(str(int(tam/(k**3))) + " GB y"+str(tam%(k**3))+" MB's")
         elif tam> k**2:
@@ -2636,4 +2649,3 @@ class Solucion(Grafo):
                 print("SUPERO CAPACIDAD")
                 return False
         return True
-
