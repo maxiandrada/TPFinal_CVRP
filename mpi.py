@@ -235,3 +235,4 @@ else:
 
     cvrp.tabuSearch()
 
+#mpirun -np 3 python3 mpi.py Instancias/Set\ 
