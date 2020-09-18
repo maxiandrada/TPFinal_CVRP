@@ -225,24 +225,24 @@ class camino(object):
 # capacidad = 100
 
 
-s= [[1, 4, 3, 18, 20, 32, 22], [1, 7, 24, 29, 5, 12, 9, 19, 10, 23], [1, 17, 8, 14, 2, 13], [1, 21, 6, 26, 11, 16, 30, 28], [1, 25, 15, 27, 31]]
-g= [[1, 23, 10, 19, 9, 12, 5, 29, 24, 7], [1, 4, 3, 18, 20, 32, 22], [1, 17, 8, 14, 2, 13], [1, 30, 16, 11, 26, 6, 21], [1, 28, 25, 15, 27, 31]]
-demandas = [0.0, 19.0, 21.0, 6.0, 19.0, 7.0, 12.0, 16.0, 6.0, 16.0, 8.0, 14.0, 21.0, 16.0, 3.0, 22.0, 18.0, 19.0, 1.0, 24.0, 8.0, 12.0, 4.0, 8.0, 24.0, 24.0, 2.0, 20.0, 15.0, 2.0, 14.0, 9.0]
-capacidad = 100
+# s= [[1, 4, 3, 18, 20, 32, 22], [1, 7, 24, 29, 5, 12, 9, 19, 10, 23], [1, 17, 8, 14, 2, 13], [1, 21, 6, 26, 11, 16, 30, 28], [1, 25, 15, 27, 31]]
+# g= [[1, 23, 10, 19, 9, 12, 5, 29, 24, 7], [1, 4, 3, 18, 20, 32, 22], [1, 17, 8, 14, 2, 13], [1, 30, 16, 11, 26, 6, 21], [1, 28, 25, 15, 27, 31]]
+# demandas = [0.0, 19.0, 21.0, 6.0, 19.0, 7.0, 12.0, 16.0, 6.0, 16.0, 8.0, 14.0, 21.0, 16.0, 3.0, 22.0, 18.0, 19.0, 1.0, 24.0, 8.0, 12.0, 4.0, 8.0, 24.0, 24.0, 2.0, 20.0, 15.0, 2.0, 14.0, 9.0]
+# capacidad = 100
 
-try:
-    print (str(s)+" Solucion")
-    caminito = camino(s, g, demandas, capacidad, [])
-    c = caminito.pathRelinking2()
-    print(str(c))
-    while not caminito.iguales():
-        c = caminito.pathRelinking2()
-        print (str(c)+str(caminito.iguales()))
-    print (str(caminito.iguales()))
-    print (str(g)+" Guia")
-except Exception as e:
-    print (e)
-print (str(s))
+# try:
+#     print (str(s)+" Solucion")
+#     caminito = camino(s, g, demandas, capacidad, [])
+#     c = caminito.pathRelinking2()
+#     print(str(c))
+#     while not caminito.iguales():
+#         c = caminito.pathRelinking2()
+#         print (str(c)+str(caminito.iguales()))
+#     print (str(caminito.iguales()))
+#     print (str(g)+" Guia")
+# except Exception as e:
+#     print (e)
+# print (str(s))
 
 # [[1, 4, 3, 18, 20, 32, 22], [1, 7, 24, 29, 5, 12, 9, 19, 10, 23], [1, 17, 8, 14, 2, 13], [1, 21, 6, 26, 11, 16, 30, 28], [1, 25, 15, 27, 31]]
 # # [[1, 23, 10, 19, 9, 12, 5, 29, 24, 7], [1, 4, 3, 18, 20, 32, 22], [1, 17, 8, 14, 2, 13], [1, 30, 16, 11, 26, 6, 21], [1, 28, 25, 15, 27, 31]]

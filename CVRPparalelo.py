@@ -12,11 +12,10 @@ import numpy as np
 from clsTxt import clsTxt
 from time import time
 import datetime
-from caminoCVRP import camino
 from mpi4py import MPI
 
 class CVRPparalelo:
-    def __init__(self, M, D, nroV, capac, archivo, carpeta, solI, tADD, tDROP, tiempo, porcentaje, optimo, rutasIniciales=None,rank=None):
+    def __init__(self, M, D, nroV, capac, subcarpeta, archivo, carpeta, solI, tADD, tDROP, tiempo, porcentaje, optimo, rutasIniciales=None,rank=None):
         self.__comm = MPI.COMM_WORLD
         self.__tiempoMPI = 0
         self.__rank = self.__comm.Get_rank()
@@ -42,7 +41,7 @@ class CVRPparalelo:
         self.__tenureMaxADD = int(tADD*1.7)
         self.__tenureDROP =  tDROP
         self.__tenureMaxDROP = int(tDROP*1.7)
-        self.__txt = clsTxt(str(archivo), str(carpeta))
+        self.__txt = clsTxt(str(archivo), str(carpeta), "paralelismo", subcarpeta)
         self.__tiempoMaxEjec = float(tiempo)
         self.rank = rank
         self.escribirDatos()
@@ -198,7 +197,7 @@ class CVRPparalelo:
         print("Costo sol Inicial: "+str(self.__S.getCostoAsociado())+"      ==> Optimo: "+str(self.__optimo)+"  Desvio: "+str(round(porcentaje*100,3))+"%")
         
 
-        cantIntercambios = int(self.__tiempoMaxEjec*2)
+        cantIntercambios = 50# int(self.__tiempoMaxEjec*2)
         self.__tiempoMPI = tiempoMax / cantIntercambios
         tCoord = time()
         nroIntercambios = 0
@@ -215,7 +214,7 @@ class CVRPparalelo:
         while(tiempoEjecuc < tiempoMax and bandera): #bandera para forzar detención de todos los nodos
             if not porcentaje*100 > self.__porcentajeParada:
                 bandera = False
-                tCoord, nroIntercambios, bandera = self.__paralelismo(True, tCoord, nroIntercambios, bandera)
+                nroIntercambios, bandera, tCoord = self.__paralelismo(True, tCoord, nroIntercambios, bandera)
             if(cond_Optimiz):
                 # tiempoInicial = 0
                 # tiempoFinal = 0
@@ -234,7 +233,7 @@ class CVRPparalelo:
             ADD = []
             DROP = []
 
-            tCoord, nroIntercambios, bandera = self.__paralelismo((time () - tCoord > self.__tiempoMPI), tCoord, nroIntercambios, bandera)
+            nroIntercambios, bandera, tCoord = self.__paralelismo((time () - tCoord > self.__tiempoMPI), tCoord, nroIntercambios, bandera)
             
             ind_random = np.arange(0,len(ind_permitidos))
             random.shuffle(ind_random)
@@ -469,6 +468,8 @@ class CVRPparalelo:
             iteracEstancamiento += 1
         if not bandera:
             print ("SE ENCONTRÓ UNA SOLUCIÓN CON UN DESVÍO MENOR AL "+str( round(self.__porcentajeParada) )+"%")
+        self.__txt.setTxtName (self.__txt.getTxtName()+"_"+str(round((self.__S.getCostoAsociado()/self.__optimo - 1.0)*100, 3))+"%")
+
         #Fin del while. Imprimo los valores obtenidos
         self.escribirDatosFinales(tiempoIni, iterac, tiempoEstancamiento)
         
@@ -476,31 +477,20 @@ class CVRPparalelo:
         if cond:
             nroIntercambios +=1
             print ("Intercambio %d con %f de dif. de tiempo <<<<--------------------------------------- MPI nodo %d <<<<---------------------------------"%(nroIntercambios, (time()-tCoord)-self.__tiempoMPI, self.__rank))
-            delay = (time()-tCoord)-self.__tiempoMPI
-            listaS = self.__comm.allgather((self.__S, self.__rank, self.__rutas, delay, self.__contSol, self.__optimosLocales[-1], bandera)) #solucion_refer, Aristas, lista_tabu, nueva_solucion, ind_permitidos, ind_permitidos, self.__rutas, Aristas, lista_tabu, ind_permitidos, rutas_refer, self._G, nueva_solucion
-            bandera = False not in [t[6] for t in listaS]   #si no hay False en la lista entonces los nodos siguen ejecutando
+            
+            listaS = self.__comm.allgather((self.__S, self.__rank, self.__rutas, self.__contSol, self.__optimosLocales[-1], bandera)) #solucion_refer, Aristas, lista_tabu, nueva_solucion, ind_permitidos, ind_permitidos, self.__rutas, Aristas, lista_tabu, ind_permitidos, rutas_refer, self._G, nueva_solucion
+            bandera = False not in [t[5] for t in listaS]   #si no hay False en la lista entonces los nodos siguen ejecutando
             for z in listaS:
                 if not self.__rank == z[1]:
-                    self.__solPR.append(z[5]) 
-            if delay > 2:
-                menor = listaS[0]
-                for i in range(1,len(listaS)):
-                    if(listaS[i][3] < menor[3]):
-                        menor = listaS[i]
-                tCoord += menor[3]
-                print ("Se aumentó el tiempo de coordinación a %d"%(menor[3]))
-            # masSol = listaS[0]
-            # for i in range(1,len(listaS)):
-            #     if(listaS[i][4] > masSol[4]):
-            #         masSol = listaS[i]
-            # print ("El nodo %d fue el que encontró mas soluciones: %d"%(masSol[1], masSol[4]))
-            # self.__solPR = masSol[5]
+                    self.__solPR.append(z[4]) 
+            
             smCosto = listaS[0]
             for i in range(1,len(listaS)):
                 if(listaS[i][0].getCostoAsociado() < smCosto[0].getCostoAsociado()):
                     smCosto = listaS[i]
             self.__S = copy.deepcopy(smCosto[0])
             self.__rutas = copy.deepcopy(smCosto[2])
+
             # Eliminamos repetidos
             i = 0
             while i < len(listaS):
@@ -527,10 +517,10 @@ class CVRPparalelo:
             for tupla in listaS:
                 self.__poolSol.append(tupla[2])
             self.__poolSol.append(copy.deepcopy(self.__rutas))
-            while len(self.__poolSol) >= 10:
+            while len(self.__poolSol) >= 15:
                 self.__poolSol.pop(0)
-            tCoord=time()
-        return tCoord, nroIntercambios, bandera
+            tCoord = time()
+        return nroIntercambios, bandera, tCoord
 
     def getPermitidos(self, Aristas, umbral, solucion):
         AristasNuevas = []

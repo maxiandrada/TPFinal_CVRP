@@ -406,7 +406,7 @@ class CVRP:
                 # Aristas = Aristas_Opt
                 umbral = self.calculaUmbral(costo)
             else:
-                print ("<<<<<<<<<<<-------------------------------------- ENTRÓ POR ELSE RARO")
+                # print ("<<<<<<<<<<<-------------------------------------- ENTRÓ POR ELSE RARO")
                 nuevas_rutas = rutas_refer
                 nueva_solucion = solucion_refer
 

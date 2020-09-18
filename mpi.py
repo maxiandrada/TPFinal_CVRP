@@ -162,12 +162,14 @@ def cargarDesdeFile2(pathArchivo):
 
 comm = MPI.COMM_WORLD
 direccion = sys.argv[1]
-
 nombre = os.path.basename(direccion)
 size = comm.Get_size()
 rank = comm.Get_rank()
 
 if rank == 0:
+    t = time.time()
+    timeObj = time.localtime(t)
+    subcarpeta = '%d-%d-%d_%d:%d:%d' % (timeObj.tm_mday, timeObj.tm_mon, timeObj.tm_year, timeObj.tm_hour, timeObj.tm_min, timeObj.tm_sec)
     nroVehiculos, optimo, capacidad, matrizDist, demandas = cargarDesdeFile2(direccion)
 
     tenureADD = int(len(matrizDist)**(1/2.0))
@@ -179,19 +181,20 @@ if rank == 0:
         demandas,
         nroVehiculos,
         capacidad,
-        nombre+"_"+str(time)+"min", 'mpi_',
+        subcarpeta,
+        nombre[:-4]+"_nodo"+str(rank)+"_"+str(time)+"min", 'mpi',
         solucionInicial, 
         tenureADD, 
         tenureDROP, 
         time, 
-        0.1, 
+        0.1,
         optimo,
         rank=rank
         )
     print("Calculando rutas iniciales en nodo root")
     rutas = cvrp.calculaRutasIniciales()
     print("Se cargaron rutas iniciales en nodo root")
-    dic = {'nroVehiculos':nroVehiculos, 'optimo':optimo, 'capacidad':capacidad, 'matrizDist':matrizDist, 'demandas':demandas, "solInicial": rutas}
+    dic = {'nroVehiculos':nroVehiculos, 'optimo':optimo, 'capacidad':capacidad, 'matrizDist':matrizDist, 'demandas':demandas, "solInicial": rutas, "subcarpeta": subcarpeta}
     for r in range(1,size):
         print(f"enviando datos a nodo {r} ")
         comm.send(dic,dest=r)
@@ -207,6 +210,7 @@ else:
     matrizDist = dic['matrizDist']
     demandas = dic['demandas']
     rutas = dic['solInicial']
+    subcarpeta = dic['subcarpeta']
 
     tenureADD = int(len(matrizDist)**(1/2.0))
     tenureDROP = int(len(matrizDist)**(1/2.0))+1
@@ -218,15 +222,16 @@ else:
         demandas,
         nroVehiculos,
         capacidad,
-        nombre+"_"+str(time)+"min", 'mpi_',
+        subcarpeta,
+        nombre[:-4]+"_nodo"+str(rank)+"_"+str(time)+"min", 'mpi',
         solucionInicial, 
         tenureADD, 
         tenureDROP, 
         time, 
-        1.0, 
+        0.1, 
         optimo,
         rutasIniciales=rutas,
         rank = rank)
 
-
     cvrp.tabuSearch()
+
