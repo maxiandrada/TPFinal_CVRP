@@ -179,7 +179,7 @@ class GUI(QMainWindow):
 
 
     def llenarTablaInstancias(self):
-        filasInstancias = DB.select_instanciaXSet(self.conn,self.setSeleccionado)
+        filasInstancias = DB.select_instanciaXSet(self.conn, self.setSeleccionado)
         #print(filasInstancias)
 
         self.tablaInstancia.setRowCount(len(filasInstancias))
@@ -259,7 +259,6 @@ class GUI(QMainWindow):
         ventanaResolverInstancia.show()
 
         botonVerResultados.clicked.connect(lambda : self.ventanaVerResultado(instancia))
-
 
     def resolverCVRP(self, instancia, cbSolucionInicial, sbTenureADD, sbTenureDROP, leTiempoEjecucion, sbParada, coordenadas, db):
         #Parámetros iniciales ingresados por el usuario

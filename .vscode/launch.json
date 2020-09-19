@@ -8,7 +8,8 @@
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",
-            "program": "${file}",
+            "program": "gui.py",//"program": "${file}", << EN LUGAR DE program y args
+            "args": ["Instancias/Set M/M-n200-k16.vrp", "10"],
             "console": "integratedTerminal"
         }
     ]
