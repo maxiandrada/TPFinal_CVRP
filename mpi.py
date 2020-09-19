@@ -11,8 +11,27 @@ from os.path import isfile, join
 import ntpath
 import sys
 import numpy as np
+import glob
 from mpi4py import MPI
 
+def find(name, path):
+    for root, dirs, files in os.walk(path):
+        if name in files:
+            return os.path.join(root, name)
+
+def findAll(match, exc, path):
+    lista = []
+    if exc == "none":
+        for root, dirs, files in os.walk(path):
+            for f in files:
+                if f.find(match) != -1 and f.endswith(".vrp"):
+                    lista.append(os.path.join(root, f))
+    else:
+        for root, dirs, files in os.walk(path):
+            for f in files:
+                if f.find(match) != -1 and f.endswith(".vrp") and f.lower().find(exc.lower())==-1:
+                    lista.append(os.path.join(root, f))
+    return lista
 
 def cargarDesdeFile(pathArchivo):
     #+-+-+-+-+-Para cargar la distancias+-+-+-+-+-+-+-+-
@@ -160,79 +179,87 @@ def cargarDesdeFile2(pathArchivo):
             demandas.append(float(splitLinea[1]))
     return nroVehiculos, optimo, capacidad, matrizDist, demandas
 
-comm = MPI.COMM_WORLD
-direccion = sys.argv[1]
-nombre = os.path.basename(direccion)
-size = comm.Get_size()
-rank = comm.Get_rank()
+def ejecutaParalelismo(direccion, tiempo):
+    comm = MPI.COMM_WORLD
+    nombre = os.path.basename(direccion)
+    size = comm.Get_size()
+    rank = comm.Get_rank()
+    if rank == 0:
+        t = time.time()
+        timeObj = time.localtime(t)
+        subcarpeta = '%d-%d-%d_%d:%d:%d' % (timeObj.tm_mday, timeObj.tm_mon, timeObj.tm_year, timeObj.tm_hour, timeObj.tm_min, timeObj.tm_sec)
+        nroVehiculos, optimo, capacidad, matrizDist, demandas = cargarDesdeFile2(direccion)
+        if tiempo == None:
+            tiempo = int(len(matrizDist)**0.6)
+        tenureADD = int(len(matrizDist)**(1/2.0))
+        tenureDROP = int(len(matrizDist)**(1/2.0))+1
+        solucionInicial = 0
+        cvrp = CVRPparalelo(
+            matrizDist,
+            demandas,
+            nroVehiculos,
+            capacidad,
+            subcarpeta,
+            nombre[:-4]+"_nodo"+str(rank)+"_"+str(tiempo)+"min", 'mpi',
+            solucionInicial, 
+            tenureADD, 
+            tenureDROP, 
+            tiempo, 
+            0.1,
+            optimo,
+            rank=rank
+            )
+        print("Calculando rutas iniciales en nodo root")
+        rutas = cvrp.calculaRutasIniciales()
+        print("Se cargaron rutas iniciales en nodo root")
+        dic = {'nroVehiculos':nroVehiculos, 'optimo':optimo, 'capacidad':capacidad, 'matrizDist':matrizDist, 'demandas':demandas, "solInicial": rutas, "subcarpeta": subcarpeta, "tiempo":tiempo}
+        for r in range(1,size):
+            print(f"enviando datos a nodo {r} ")
+            comm.send(dic,dest=r)
+        
+        cvrp.setRutasIniciales(rutas)
+        cvrp.tabuSearch()
+        
+    else:
+        dic = comm.recv()
+        nroVehiculos = dic['nroVehiculos']
+        optimo = dic['optimo']
+        capacidad = dic['capacidad']
+        matrizDist = dic['matrizDist']
+        demandas = dic['demandas']
+        rutas = dic['solInicial']
+        subcarpeta = dic['subcarpeta']
+        tiempo = dic["tiempo"]
 
-if rank == 0:
-    t = time.time()
-    timeObj = time.localtime(t)
-    subcarpeta = '%d-%d-%d_%d:%d:%d' % (timeObj.tm_mday, timeObj.tm_mon, timeObj.tm_year, timeObj.tm_hour, timeObj.tm_min, timeObj.tm_sec)
-    nroVehiculos, optimo, capacidad, matrizDist, demandas = cargarDesdeFile2(direccion)
+        tenureADD = int(len(matrizDist)**(1/2.0))
+        tenureDROP = int(len(matrizDist)**(1/2.0))+1
+        solucionInicial = 0
+        print("Creando Instancias CVRP en nodo ", rank)
+        cvrp = CVRPparalelo(
+            matrizDist,
+            demandas,
+            nroVehiculos,
+            capacidad,
+            subcarpeta,
+            nombre[:-4]+"_nodo"+str(rank)+"_"+str(tiempo)+"min", 'mpi',
+            solucionInicial, 
+            tenureADD, 
+            tenureDROP, 
+            tiempo, 
+            0.1, 
+            optimo,
+            rutasIniciales=rutas,
+            rank = rank)
 
-    tenureADD = int(len(matrizDist)**(1/2.0))
-    tenureDROP = int(len(matrizDist)**(1/2.0))+1
-    solucionInicial = 0
-    time = sys.argv[2]
-    cvrp = CVRPparalelo(
-        matrizDist,
-        demandas,
-        nroVehiculos,
-        capacidad,
-        subcarpeta,
-        nombre[:-4]+"_nodo"+str(rank)+"_"+str(time)+"min", 'mpi',
-        solucionInicial, 
-        tenureADD, 
-        tenureDROP, 
-        time, 
-        0.1,
-        optimo,
-        rank=rank
-        )
-    print("Calculando rutas iniciales en nodo root")
-    rutas = cvrp.calculaRutasIniciales()
-    print("Se cargaron rutas iniciales en nodo root")
-    dic = {'nroVehiculos':nroVehiculos, 'optimo':optimo, 'capacidad':capacidad, 'matrizDist':matrizDist, 'demandas':demandas, "solInicial": rutas, "subcarpeta": subcarpeta}
-    for r in range(1,size):
-        print(f"enviando datos a nodo {r} ")
-        comm.send(dic,dest=r)
-    
-    cvrp.setRutasIniciales(rutas)
-    cvrp.tabuSearch()
-    
-else:
-    dic = comm.recv()
-    nroVehiculos = dic['nroVehiculos']
-    optimo = dic['optimo']
-    capacidad = dic['capacidad']
-    matrizDist = dic['matrizDist']
-    demandas = dic['demandas']
-    rutas = dic['solInicial']
-    subcarpeta = dic['subcarpeta']
+        cvrp.tabuSearch()
 
-    tenureADD = int(len(matrizDist)**(1/2.0))
-    tenureDROP = int(len(matrizDist)**(1/2.0))+1
-    solucionInicial = 0
-    time = sys.argv[2]
-    print("Creando Instancias CVRP en nodo ", rank)
-    cvrp = CVRPparalelo(
-        matrizDist,
-        demandas,
-        nroVehiculos,
-        capacidad,
-        subcarpeta,
-        nombre[:-4]+"_nodo"+str(rank)+"_"+str(time)+"min", 'mpi',
-        solucionInicial, 
-        tenureADD, 
-        tenureDROP, 
-        time, 
-        0.1, 
-        optimo,
-        rutasIniciales=rutas,
-        rank = rank)
 
-    cvrp.tabuSearch()
-
-#mpirun -np 3 python3 mpi.py Instancias/Set\ 
+match = str(sys.argv[1])
+exc = str(sys.argv[2])
+try:
+    tiempo = sys.argv[3]
+except IndexError:
+    tiempo = None
+for f in findAll(match, exc, os.getcwd()):
+    print ("AHORA SE EJECUTARÁ LA INSTANCIA :\n"+f)
+    ejecutaParalelismo(f, tiempo)
