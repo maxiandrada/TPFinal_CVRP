@@ -27,7 +27,7 @@ class CVRPparalelo:
         self.__S = Solucion(M, D, sum(D))    #Solucion general del CVRP
         self.__Distancias = M                #Mareiz de distancias
         self.__Demandas = D                  #Demandas de los clientes
-        print (str(self.__Demandas))
+        # print (str(self.__Demandas))
         self.__capacidadMax = capac          #Capacidad max por vehiculo
         self.__rutas = []                    #Soluciones por vehiculo (lista de soluciones)
         self.__nroVehiculos = nroV           #Nro de vehiculos disponibles
@@ -60,7 +60,7 @@ class CVRPparalelo:
         #tiempoIni = time()
         #print("tiempo carga solucion: ", time()-tiempoIni)
     def calculaRutasIniciales(self):
-        return self.__S.rutasIniciales(self.__tipoSolucionIni, self.__nroVehiculos, self.__Demandas, self.__capacidadMax,self._G)        #print("tiempo solucion inicial: ", time()-tiempoIni)
+        return self.__S.rutasIniciales(self.__tipoSolucionIni, self.__nroVehiculos, self.__Demandas, self.__capacidadMax,self._G)[0]        #print("tiempo solucion inicial: ", time()-tiempoIni)
 
     def setRutasIniciales(self,rutas):
         self.__rutas = rutas
@@ -82,7 +82,7 @@ class CVRPparalelo:
 
     #Carga la solucion general a partir de las rutas
     def cargaSolucion(self, rutas):
-        t = time()
+        # t = time()
         S = Solucion(self.__Distancias, self.__Demandas, sum(self.__Demandas),self._G,True)
         cap = 0
         costoTotal = 0
@@ -107,7 +107,6 @@ class CVRPparalelo:
         sol_ini+="\n--> Costo total: "+str(costoTotal)+"          Capacidad total: "+str(cap)
         # print(sol_ini)
         # print("+-+-++-+-++-+-++-+-++-+-++-+-++-+-++-+-+")
-        self.__txt.escribir(sol_ini)
         costoTotal = round(costoTotal, 3)
         S.setCostoAsociado(costoTotal)
         S.setCapacidad(cap)
@@ -239,7 +238,7 @@ class CVRPparalelo:
             random.shuffle(ind_random)
             
             indRutas = indAristas = []
-            nuevo_costo, k_Opt, indRutas, indAristas, aristasADD, aristasDROP = nueva_solucion.evaluarOpt(self._G.getA(), ind_permitidos, ind_random, rutas_refer, cond_Estancamiento)
+            nuevo_costo, k_Opt, indRutas, indAristas, aristasADD, aristasDROP, ind_permitidos= nueva_solucion.evaluarOpt(self._G.getA(), ind_permitidos, ind_random, rutas_refer, cond_Estancamiento)
 
             nuevo_costo = round(nuevo_costo, 3)
 
