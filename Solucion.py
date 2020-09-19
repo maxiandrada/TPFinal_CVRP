@@ -8,17 +8,6 @@ import math
 import numpy as np
 from time import time
 
-from Grafo import Grafo 
-from Vertice import Vertice 
-from Arista import Arista
-import copy
-import sys
-import random
-import math
-import numpy as np
-from time import time
-
-
 class Solucion(Grafo):
     def __init__(self, M, Demanda, capacidad,G=None,vacio=False):
         super(Solucion, self).__init__(M, Demanda,G,vacio=vacio)
@@ -71,50 +60,63 @@ class Solucion(Grafo):
         sol_factible = False
         _lambda = 1
         mu = ni = iteracion = 0
+        
         while(not sol_factible):
             rutas = []
+
             if(strSolInicial==0):
                 print("Solucion inicial con Clark & Wright...")
                 R, _lambda, mu, ni, iteracion = self.clarkWright(nroVehiculos, _lambda, mu, ni, iteracion)
-                # print("lambda: ", _lambda)
-                # print("mu: ", mu)
-                # print("ni: ", ni)
-                # print("iteracion: ", iteracion)
+                
                 if (R == []):
                     if(iteracion == 1):
                         print("No se encontro solucion factible con Clark & Wright probamos con otra")
                         sol_factible = False
-                        strSolInicial = 1
+                        #strSolInicial = 1
                     print("aún nada u.u Seguimos probando con otras variaciones")
                 else:
-                    print("se encontro solución inicial factible :)")
-                    sol_factible = True
-                    rutas = self.cargarRutas(R, capacidad,G)
-                    self.eliminarRutasSobrantes(rutas,nroVehiculos,capacidad)
+                    rutas = self.cargarRutas(R, capacidad, G)
+                    if len(rutas) > nroVehiculos:
+                        self.eliminarRutasSobrantes(rutas, nroVehiculos, capacidad)
+                    
+                    if rutas != []:
+                        print("se encontro solución inicial factible :)")
+                        sol_factible = True
+                    else:
+                        strSolInicial = 3
+
             elif(strSolInicial==1):
                 print("Sol Inicial por Vecino Cercano...")
                 sol_factible = self.solInicial_VecinoCercano(nroVehiculos, capacidad, demandas, rutas,G)
-                print(rutas)
-                if(sol_factible):
+                #print(rutas)
+                if sol_factible:
                     rutas = self.cargarRutas(rutas, capacidad,G)
-                else:
-                    rutas = self.cargarRutas(rutas, capacidad,G)
-                    self.eliminarRutasSobrantes(rutas,nroVehiculos,capacidad)
-                    sol_factible = True
+                # if not sol_factible:
+                #     self.eliminarRutasSobrantes(rutas, nroVehiculos, capacidad)
+                
+                # if(sol_factible):
+                #     rutas = self.cargarRutas(rutas, capacidad,G)
+                # else:
+                #     rutas = self.cargarRutas(rutas, capacidad,G)
+                #     #self.eliminarRutasSobrantes(rutas, nroVehiculos, capacidad)
                 strSolInicial = 0
+            
             elif(strSolInicial == 2):
                 print("Sol Inicial secuencial...")
                 secuenciaInd = list(range(1,len(self._matrizDistancias)))
                 print("secuencia de indices de los vectores: "+str(secuenciaInd))
-                self.cargar_secuencia(secuenciaInd, nroVehiculos, demandas, capacidad, rutas)
+                sol_factible = self.cargar_secuencia(secuenciaInd, nroVehiculos, demandas, capacidad, rutas)
+                strSolInicial = 3
+            
             else:
                 print("Sol Inicial al azar...")
                 secuenciaInd = list(range(1,len(self._matrizDistancias)))
                 random.shuffle(secuenciaInd)
-                self.cargar_secuencia(secuenciaInd, nroVehiculos, demandas, capacidad, rutas)
+                sol_factible = self.cargar_secuencia(secuenciaInd, nroVehiculos, demandas, capacidad, rutas)
 
         print("Cantidad de Vehículos "+ str(nroVehiculos)+" cantidad de rutas: "+str(len(rutas)))
-        return rutas
+        return rutas, strSolInicial
+    
     #Cargar las rutas a partir de una lista de enteros
     def cargar_secuencia(self, secuencia, nroVehiculos, demandas, capacidad, rutas):
         secuenciaInd = secuencia
@@ -154,11 +156,12 @@ class Solucion(Grafo):
         
         return sub_secuenciaInd
 
-    def solInicial_VecinoCercano(self, nroVehiculos, capacidad, demanda, rutas,G):
+    def solInicial_VecinoCercano(self, nroVehiculos, capacidad, demanda, rutas, G):
         visitados = []
         recorrido = []
         visitados.append(0)    #Agrego el vertice inicial
-        
+        V = [i for i in range(0, len(self.getV()))]
+
         for j in range(0, nroVehiculos):
             recorrido = [1]
             masCercano=0
@@ -169,16 +172,19 @@ class Solucion(Grafo):
                     acum_demanda += demanda[masCercano]
                     recorrido.append(masCercano+1)
                     visitados.append(masCercano)
+                    V.remove(masCercano)
                 if(acum_demanda > self.__capacidad/nroVehiculos):
                     break
                 i
             j
             rutas.append(recorrido)
-        
 
-        if(len(visitados)<len(self.getV())):
+        if(len(visitados) < len(self.getV())):
             #V = np.arange(0, len(self.getV()))
             #noVisitados = [x for x in V if x not in V]
+            recorrido = [(i+1) for i in V]
+            print("recorrido: "+str(recorrido))
+            rutas.append(recorrido)
             print("Solucion no factible. Repetimos proceso con otra solucion inicial")
             return False
         else:
@@ -196,7 +202,7 @@ class Solucion(Grafo):
         
         return indMasCercano
 
-    def cargarRutas(self, rutas, capacidad,gr):
+    def cargarRutas(self, rutas, capacidad, gr):
         R = []
         t = time()
         print("Se inició cargarRutas")
@@ -334,7 +340,23 @@ class Solucion(Grafo):
                             rutas[j[0]].insert(ind+1,mejorAhorro[0])
                         self.removeRuta(i[0],rutas)
 
-        
+        if(len(rutas)!=nroVehiculos):
+            if(iteracion == 0):
+                _lambda = 0.1 
+                mu = 2
+                ni = 2 
+            #     rutas = []
+            # elif(iteracion < 2):
+            #     _lambda += 0.5
+            #     mu -= 0.1
+            #     ni -= 0.1
+            #     rutas = []
+            # else:
+            #     _lambda += 0.1
+            #     mu -= 0.1
+            #     ni -= 0.1
+            # iteracion +=1
+
         print("tiempo clarke wright ", time()-t)
         return rutas, _lambda, mu, ni, iteracion
 
@@ -466,7 +488,7 @@ class Solucion(Grafo):
             costoSolucion = self.getCostoAsociado()
             ADD = DROP = []
         
-        return costoSolucion, [kOpt, tipo_kOpt], indRutas, indAristas, ADD, DROP
+        return costoSolucion, [kOpt, tipo_kOpt], indRutas, indAristas, ADD, DROP, ind_permitidos
     
     def evaluar_2opt(self, aristaIni, ind_rutas, ind_A, rutas):
         opcion = 0
@@ -2427,7 +2449,10 @@ class Solucion(Grafo):
         RS = [rutas[i] for i in indRS]
         RF = [rutas[i] for i in range(len(rutas)) if i not in indRS]
         RF = self.rutasDemandaOrdenada(RF)
+        iterac = 0
+
         for rutaSobrante in RS:
+            iterac += 1
             verticesRuta, indiceV = self.demandasOrdenadas(rutaSobrante, desc=True, index=True)
             verticesRuta = verticesRuta[:-1]
             indiceV = indiceV[:-1]
@@ -2442,12 +2467,18 @@ class Solucion(Grafo):
                     verticesRuta, indiceV = self.demandasOrdenadas(rutaSobrante, desc=True, index=True)
                     verticesRuta = verticesRuta[:-1]
                     indiceV = indiceV[:-1]
+
+            if iterac > 10:
+                rutas = []
+                return rutas
+
         for i in indRS:
             rutas.pop(i)
         for x in rutas:
             x.cargarDesdeSecuenciaDeVertices(x.getV())
         
-        print(rutas)
+        #print(rutas)
+
         return rutas
 
     def depurarRutas(self, rutas, cantidadNecesaria, capacidad):
@@ -2518,7 +2549,8 @@ class Solucion(Grafo):
 
         ret = [rutas[q[0]] for q in Q]
         ind = [q[0] for q in Q]
-        [print("Ruta " + str(q[2]) + " --> primer cuartil: " + str(q[1]) + "\n") for q in Q]
+        #[print("Ruta " + str(q[2]) + " --> primer cuartil: " + str(q[1]) + "\n") for q in Q]
+        
         return ret, ind
 
     def rutasDemandaOrdenada(self, rutas, desc=False):
@@ -2544,7 +2576,7 @@ class Solucion(Grafo):
                     costoMin = costo
                     indMejorUbicacion = i
                     indMejorRuta = r
-        print(costoMin)
+        #print(costoMin)
 
         ruta.getV().pop(ind) #Es 1 para no borrar el depósito
         ruta.setCapacidad(ruta.getCapacidad() - v.getDemanda())
@@ -2589,7 +2621,7 @@ class Solucion(Grafo):
     def sizeOf(self, obj):
         tam = sys.getsizeof(obj)
         k = 1000
-        print(tam)
+        #print(tam)
         if tam> k**3:
             print(str(int(tam/(k**3))) + " GB y"+str(tam%(k**3))+" MB's")
         elif tam> k**2:

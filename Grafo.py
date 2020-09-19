@@ -12,7 +12,7 @@ class Grafo:
             self._costoAsociado = 0
             self._V = []
             self._A = []
-            self._AristasUnicas = []
+            self._IdAristasUnicas = []
             self._grado = len(M)
             self._matrizDistancias = M
             self._demanda = D
@@ -35,6 +35,9 @@ class Grafo:
 
     def getGrado(self):
         return self._grado
+
+    def getIdAristasUnicas(self):
+        return self._IdAristasUnicas
 
     def getDemandaAcumulada(self):
         return self._demandaAcumulada
@@ -274,6 +277,10 @@ class Grafo:
                 aux = Arista(Vertice(fila+1, Demanda[fila]),Vertice(columna+1, Demanda[columna]),(Matriz[fila][columna]))
                 aux.setId(fila, columna, len(Matriz))
                 self._A.append(aux)
+                
+                if columna!= fila and columna > fila:
+                    self._IdAristasUnicas.append(aux.getId())
+
                 #aux = Arista(self._V[fila],self._V[columna],(Matriz[fila][columna]))
                 #aux.setId(fila, columna, len(Matriz))
                 #self._A.append(aux)
