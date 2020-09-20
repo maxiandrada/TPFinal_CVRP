@@ -9,9 +9,13 @@
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",
-            "program": "gui.py",
+            "program": "secuencial.py",
             "args": [
-                "Instancias/Set A/A-n32-k5.vrp",
+                "Instancias/Set M/M-n200-k16.vrp",
+                "10"
+            ],
+            "args2": [
+                "Instancias/Set E/E-n30-k3.vrp",
                 "10"
             ],
             "console": "integratedTerminal"
