@@ -194,24 +194,40 @@ class GUI(QMainWindow):
         ventanaProgramacion.exec()
 
     def reporte_total(self, formato):
+        encabezado = [
+            "Nombre",
+            "Nº Vehículos",
+            "Cantidad Clientes",
+            "Óptimo Encontrado",
+            "Óptimo Promedio",
+            "Mejor Óptimo",
+            "Óptimo conocido",
+            "Desvío Promedio",
+            "Cantidad de veces resuelto"
+        ]
         sets = DB.select_sets(self.conn)
         if formato == "XLSX":
-            XLSX = xlsxwriter.Workbook("Reporte Resultados")
+            XLSX = xlsxwriter.Workbook("Reporte Resultados.xlsx")
             hoja = XLSX.add_worksheet()
-            dataFormat = workbook.add_format({'bg_color': '#9fc5e8'})
+            dataFormat = XLSX.add_format({'bg_color': '#9fc5e8'})
             for j in range(len(encabezado)):
                 hoja.write(0, j, encabezado[j])
-            contadorFilas = 1
+            hoja.set_row(0, cell_format=dataFormat)
+            contadorFilas = 2
+            contadorSets = 1
             for s in sets:
-                hoja.write(contadorFilas, 0, s[1])
-                hoja.set_row(contadorFilas, cell_format=dataFormat)
+                print("Se escribió set", s)
+                hoja.write(contadorSets, 0, s[1])
+                hoja.set_row(contadorSets, cell_format=dataFormat)
                 instancias = DB.select_instanciaXSet(self.conn, s[0])
                 for i in instancias:
                     filas = DB.select_reporte_total(self.conn, i[0])
                     for elem in filas:
                         for k in range(len(elem)):
                             hoja.write(contadorFilas, k, elem[k])
-                            contadorFilas+=1
+                        contadorFilas += 1
+                contadorSets = contadorFilas 
+                contadorFilas += 1
             XLSX.close()
 
     def iniciarBarra(self):
@@ -255,7 +271,7 @@ class GUI(QMainWindow):
 
         # fijar en layout
         # Eventos
-        botonOK.clicked.connect(lambda: cargarSetDB(textEditNombreSet.text()))
+        botonOK.clicked.connect(lambda: self.cargarSetDB(textEditNombreSet.text()))
         botonCancelar.clicked.connect(lambda: ventanaCargarSet.close())
 
         layoutCargaSet.addWidget(labelNombreSet, 0, 0)
@@ -265,12 +281,12 @@ class GUI(QMainWindow):
         ventanaCargarSet.setLayout(layoutCargaSet)
         ventanaCargarSet.exec()
 
-    def cargarSetDB(self, nombre):
+    def cargarSetDB(self, nombre, ventana):
         if(nombre != ""):
             print("NOMBRE; ", nombre)
             DB.insert_set(self.conn, (nombre,))
             self.tablaSetProblemas()
-            self.ventanaCargarSet.close()
+            self.ventana.close()
         else:
             error_dialog = QErrorMessage()
             error_dialog.setWindowTitle("ERROR")
@@ -378,13 +394,15 @@ class GUI(QMainWindow):
         layoutVG.addWidget(botonResolver, 4, 2)
         layoutVG.addWidget(botonVerResultados, 4, 3)
 
-        def resolver(): return self.resolverCVRP(instancia, cbSolucionInicial, sbTenureADD,
-                                                 sbTenureDROP, leTiempoEjecucion, sbParada, coordenadas, self.conn)
         botonResolver.clicked.connect(resolver)
         ventanaResolverInstancia.show()
 
         botonVerResultados.clicked.connect(
             lambda: self.ventanaVerResultado(instancia[0], instancia[1]))
+
+    def resolver():
+        return self.resolverCVRP(instancia, cbSolucionInicial, sbTenureADD,
+                                                 sbTenureDROP, leTiempoEjecucion, sbParada, coordenadas, self.conn)
 
     def resolverCVRP(self, instancia, cbSolucionInicial, sbTenureADD, sbTenureDROP, leTiempoEjecucion, sbParada, coordenadas, db):
         # Parámetros iniciales ingresados por el usuario
@@ -466,7 +484,7 @@ class GUI(QMainWindow):
     def ventanaVerResultado(self, instanciaId, nombreInstancia):
         instancia = DB.select_instancia(self.conn, str(instanciaId))[0]
         ventanaResultados = QDialog(self)
-        
+
         # QBox
         gBResultados = QGroupBox("Resultados")
         gBGrafico = QGroupBox("Grafico")
@@ -544,24 +562,36 @@ class GUI(QMainWindow):
                 i, 11, QTableWidgetItem(str(filasResoluciones[i][0])))
 
         # TreeView Resultados
-        treeViewSoluciones = QTreeView()
-        layoutSoluciones.addWidget(treeViewSoluciones)
-        model = QtGui.QStandardItemModel()
-        model.setHorizontalHeaderLabels(['Iteración', 'Costo', "Origen"])
-        treeViewSoluciones.header().setDefaultSectionSize(180)
-        treeViewSoluciones.setModel(model)
-        root = model.invisibleRootItem()
-        #model.itemClicked.connect(lambda: self.establecerSolucionSeleccionada(treeViewSoluciones))
-        #mv = treeViewSoluciones.setSelectionBehavior()
-        sm = treeViewSoluciones.selectionModel()
-        sm.selectionChanged.connect(lambda: self.establecerSolucionSeleccionada(treeViewSoluciones, graficoSoluciones, instancia[7])) 
+        treeSoluciones = QTreeWidget()
+        layoutSoluciones.addWidget(treeSoluciones)
+        treeSoluciones.setHeaderLabels(['Iteración', 'Costo', "Origen"])
+        treeSoluciones.itemClicked.connect(lambda: self.establecerSolucionSeleccionada(
+                                        graficoSoluciones,
+                                        instancia[7],
+                                        treeSoluciones,
+                                        instancia[3])
+                                    )
         # Eventos de Tabla Resoluciones
         tablaResoluciones.resizeRowToContents(5)
         tablaResoluciones.setSelectionBehavior(QTableView.SelectRows)
         tablaResoluciones.itemSelectionChanged.connect(
-            lambda: self.establecerResolucionSeleccionada(tablaResoluciones, root))
+            lambda: self.establecerResolucionSeleccionada(tablaResoluciones,
+                                                          treeSoluciones,
+                                                          graficoSoluciones,
+                                                          instancia
+                                                          ))
         layoutTablas = QVBoxLayout()
         layoutTablas.addWidget(tablaResoluciones)
+        #Seleccionar Filas
+        tablaResoluciones.selectRow(0)
+        self.establecerResolucionSeleccionada(tablaResoluciones,
+                                              treeSoluciones,
+                                              graficoSoluciones,
+                                              instancia)
+        treeSoluciones.currentIndex()
+        # Eventos Botones
+
+        # Configurando Layouts
         gBResultados.setLayout(layoutTablas)
         gBGrafico.setLayout(layoutGrafico)
         gBAcciones.setLayout(layoutAcciones)
@@ -579,43 +609,48 @@ class GUI(QMainWindow):
         layoutPrincipal.addWidget(gBAcciones, 1, 1)
         ventanaResultados.setLayout(layoutPrincipal)
         ventanaResultados.exec()
-        
-    @QtCore.pyqtSlot(QtWidgets.QTreeWidgetItem)
-    def establecerSolucionSeleccionada(self, arbol, grafico, coordenadas):
-        indice = arbol.currentIndex()
-        indiceFila = indice.row()
-        fila = arbol.model().itemFromIndex(indice)
-        hijo = fila.child(0, 1)
-        #print("hijo: ", hijo.__dict__())
-        print("indice: ", indice)
-        print("fila: ", fila.text())
 
-    def establecerResolucionSeleccionada(self, tabla, arbol):
+    def seleccionarPrimerFilaTW(self, treeSoluciones):
+        primeraFila = treeSoluciones.invisibleRootItem().child(0)
+        treeSoluciones.setCurrentItem(primeraFila)
+    
+    def seleccionarUltimaFilaTW(self, treeSoluciones):
+        pass
+
+    @QtCore.pyqtSlot(QtWidgets.QTreeWidgetItem)
+    def establecerSolucionSeleccionada(self, grafico, coordenadas, arbol, nroVehiculos):
+        filaSeleccionada = arbol.selectedItems()[0]
+        #print(dir(filaSeleccionada))
+        if filaSeleccionada.parent() == None:
+            rutas = []
+            R = filaSeleccionada.child(0)
+            for j in range(R.childCount()):
+                vertices = R.child(j).text(0)
+                rutas.append(json.loads(vertices))
+            self.dibujarSolucion(grafico, rutas, coordenadas, nroVehiculos)
+
+    def establecerResolucionSeleccionada(self, tabla, arbol, grafico, instancia):
+        self.seleccionarPrimerFilaTW(arbol)
+        self.establecerSolucionSeleccionada(grafico , instancia[7],  treeSoluciones, instancia[3])
         self.resolucionSeleccionada = str(tabla.selectedItems()[11].text())
-        arbol.clearData()
+        arbol.clear()
         print(self.resolucionSeleccionada)
         filasSoluciones = DB.select_solucionesXResolucion(
             self.conn, self.resolucionSeleccionada)
+        items = []
         for s in filasSoluciones:
             rutas = json.loads(s[2])
             origen = json.loads(s[3])
-            iteracion = QtGui.QStandardItem(str(s[4]))
-            costo = QtGui.QStandardItem(str(s[1]))
-            
-            origen = QtGui.QStandardItem(self.getOrigenSolucion(origen))
-            print(rutas)
-            arbol.appendRow([
-                iteracion,
-                costo,
-                origen 
-            ])
-            
-            rutasQt = [QtGui.QStandardItem(("Ruta %d")%(r+1)) for r in range(len(rutas))]
-            for i in range(len(rutas)):
-                vertices = str(rutas[i])
-                rutasQt[i].appendRow([QtGui.QStandardItem(vertices)])
-            for r in rutasQt:
-                iteracion.appendRow(r)
+            fila = QtGui.QTreeWidgetItem(arbol, [str(s[4]), str(s[1]), self.getOrigenSolucion(origen)])
+            for r in range(len(rutas)):
+                ruta = QtGui.QTreeWidgetItem(fila, [("Ruta %d")%(r+1)])
+                for i in range(len(rutas)):
+                    vertices = QtGui.QTreeWidgetItem(ruta, [str(rutas[i])])
+                    ruta.addChild(vertices)
+            fila.addChild(ruta)
+        arbol.insertTopLevelItems(0, items)
+
+
         # print(filasSoluciones)
 
     def getOrigenSolucion(self, kopt):
@@ -832,27 +867,30 @@ class GUI(QMainWindow):
 
         print(f"Se cargó el gráfico --> {time()-t} ")
 
-    def dibujarSolucion(self, grafico, rutas, coordenadas):
+    def dibujarSolucion(self, grafico, rutas, coordenadas, nroVehiculos):
         """Dibuja rutas, apartir de una lista de enteros, que representarían a los vértices"""
 
+        coordenadas = json.loads(coordenadas)
         t = time()
         grafico.clear()
-
+        indRutas=list(range(len(rutas)))
         i = 0
         for r in rutas:
             x = [coordenadas[0][1]]
             y = [coordenadas[0][2]]
             for v in r:
-                x.append(coordenadas[v][1])
-                y.append(coordenadas[v][2])
+                x.append(coordenadas[int(v) - 1][1])
+                y.append(coordenadas[int(v) - 1][2])
             x += [coordenadas[0][1]]
             y += [coordenadas[0][2]]
             ruta = grafico.plot(x, y, pen=(
-                indRutas[i], i), symbol='o', symbolBrush=(indRutas[i], i))
+                indRutas[i], nroVehiculos), symbol='o', symbolBrush=(indRutas[i], nroVehiculos))
 
             i += 1
+        x = [coordenadas[0][1]]
+        y = [coordenadas[0][2]]
         deposito = grafico.plot(x, y, pen=(
-        0, 0), symbol='h', symbolSize=20, symbolBrush=(255, 255, 255))
+            0, nroVehiculos), symbol='h', symbolSize=20, symbolBrush=(255, 255, 255))
         print(f"Se cargó el gráfico --> {time()-t} ")
 
 class Worker(QRunnable):

@@ -3,10 +3,10 @@ from Arista import Arista
 from Grafo import Grafo
 from Solucion import Solucion
 from Tabu import Tabu, ListaTabu
-import random 
+import random
 import sys
 import re
-import math 
+import math
 import copy
 import numpy as np
 from clsTxt import clsTxt
@@ -16,7 +16,22 @@ import DB
 import json
 
 class CVRP:
-    def __init__(self, M, D, nroV, capac, archivo, carpeta, solI, tADD, tDROP, tiempo, porcentaje, optimo, cargarEnDB = None, idInstancia = None):
+    def __init__(self,
+                 M,
+                 D,
+                 nroV,
+                 capac,
+                 archivo,
+                 carpeta,
+                 solI,
+                 tADD,
+                 tDROP,
+                 tiempo,
+                 porcentaje,
+                 optimo,
+                 cargarEnDB = None,
+                 idInstancia = None,
+                 criterioTenure = None):
         self.__solInicial = ['Clark & Wright', 'Vecino cercano', 'Secuencial', 'Al azar']
         self._G = Grafo(M, D)                #Grafo original
         self.__S = Solucion(M, D, sum(D))    #Solucion general del CVRP
@@ -31,14 +46,14 @@ class CVRP:
         self.__optimosLocales = []           #Lista de optimos locales 
         self.__porcentajeParada = float(porcentaje) #Porcentaje de desvio minimo como condicion de parada
         self.__optimo = optimo               #Mejor valor de la instancia
-        self.__tenureADD =  tADD             
+        self.__tenureADD =  tADD
         self.__tenureMaxADD = int(tADD*1.7)
         self.__tenureDROP =  tDROP
         self.__tenureMaxDROP = int(tDROP*1.7)
         self.__txt = clsTxt(str(archivo), str(carpeta))
         self.__tiempoMaxEjec = float(tiempo)
         self.escribirDatos()
-        
+
         self.__S.setCapacidadMax(self.__capacidadMax)
         tiempoIni = time()
         self.__rutas, self.__tipoSolucionIni = self.__S.rutasIniciales(self.__tipoSolucionIni, self.__nroVehiculos, self.__Demandas, self.__capacidadMax, self._G)        #print("tiempo solucion inicial: ", time()-tiempoIni)
@@ -46,12 +61,14 @@ class CVRP:
         #tiempoIni = time()
         self.__S, strText = self.cargaSolucion(self.__rutas)
         self.__txt.escribir(strText)
-        
+        self.__costosOptimosLocales = []        
         #print("tiempo carga solucion: ", time()-tiempoIni)
         self.c = None
 
         if idInstancia is not None:
             self.idInstancia = idInstancia
+        if criterioTenure is not None:
+            self.criterioTenure = criterioTenure
         self.conn = DB.DB()
         #self.tabuSearch()
         self.swaps = [0]*4
@@ -729,6 +746,8 @@ class CVRP:
         self.__optimosLocales.append(OL)
         self.__swapOptimoLocal.append(swap)
         self.__iteracionOptimoLocal.append(iteracion)
+        costos = [x.getCostoAsociado() for x in OL]
+        self.__costosOptimosLocales.append(costos)
 
     def eliminarOptimoLocal(self, indice):
         self.__optimosLocales.pop(indice)
@@ -747,7 +766,8 @@ class CVRP:
             porcentaje*100,
             tiempo,
             json.dumps(s.swaps),
-            s.__tipoSolucionIni
+            s.__tipoSolucionIni,
+            s.criterioTenure
             )
         idResolucion = DB.insert_resolucion(self.conn,resolucion)
         DB.insert_resolucionXInstancia(self.conn,(idResolucion,self.idInstancia))
@@ -763,9 +783,10 @@ class CVRP:
                 json.dumps(rutas),
                 json.dumps(self.__swapOptimoLocal[i]),
                 self.__iteracionOptimoLocal[i],
-                )
+                json.dumps(self.__costosOptimosLocales[i])
+            )
             idSol = DB.insert_solucion(self.conn, S)
             idSoluciones.append(idSol)
-        
+
         for j in idSoluciones:
-            DB.insert_solucionXResolucion(self.conn, (idResolucion,j))       
+            DB.insert_solucionXResolucion(self.conn, (idResolucion,j)) 

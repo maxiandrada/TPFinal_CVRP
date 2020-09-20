@@ -40,7 +40,8 @@ def DB():
                                 porcentajeError real NOT NULL,
                                 tiempoResolucion real NOT NULL,
                                 swaps text NOT NULL,
-                                solucionInicial text NOT NULL
+                                solucionInicial text NOT NULL,
+                                criterioTenure integer NOT NULL
                             );"""
 
     sql_solucion_table = """CREATE TABLE IF NOT EXISTS Soluciones (
@@ -48,7 +49,8 @@ def DB():
                             costo float NOT NULL,
                             rutas text NOT NULL,
                             origen  text NOT NULL,
-                            iteracion integer NOT null
+                            iteracion integer NOT null,
+                            costoRutas text NOT null
                             );
                         """
 
@@ -113,7 +115,14 @@ def insert_set(conn,_set):
     return cur.lastrowid
 
 def insert_resolucion(conn,resolucion):
-    sql = ''' INSERT INTO Resoluciones (iteraciones,optimoEncontrado,tenueADD,tenureDROP,porcentajeError,tiempoResolucion,swaps, solucionInicial) VALUES (?,?,?,?,?,?,?,?) '''
+    sql = ''' INSERT INTO Resoluciones (iteraciones,
+                                        optimoEncontrado,
+                                        tenueADD,tenureDROP,
+                                        porcentajeError,
+                                        tiempoResolucion,
+                                        swaps,
+                                        solucionInicial,
+                                        criterioTenure) VALUES (?,?,?,?,?,?,?,?,?) '''
 
     cur = conn.cursor()
     cur.execute(sql, resolucion)
@@ -139,7 +148,7 @@ def insert_instancia(conn,instancia):
     return cur.lastrowid
 
 def insert_solucion(conn, solucion):
-    sql = ''' INSERT INTO Soluciones (costo,rutas,origen,iteracion) VALUES (?,?,?,?) '''
+    sql = ''' INSERT INTO Soluciones (costo, rutas, origen, iteracion, costoRutas) VALUES (?,?,?,?,?) '''
     cur = conn.cursor()
 
     cur.execute(sql, solucion)
