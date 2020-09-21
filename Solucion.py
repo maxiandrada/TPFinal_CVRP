@@ -8,17 +8,6 @@ import math
 import numpy as np
 from time import time
 
-from Grafo import Grafo 
-from Vertice import Vertice 
-from Arista import Arista
-import copy
-import sys
-import random
-import math
-import numpy as np
-from time import time
-
-
 class Solucion(Grafo):
     def __init__(self, M, Demanda, capacidad,G=None,vacio=False):
         super(Solucion, self).__init__(M, Demanda,G,vacio=vacio)
@@ -86,12 +75,12 @@ class Solucion(Grafo):
                         #strSolInicial = 1
                     print("aún nada u.u Seguimos probando con otras variaciones")
                 else:
-                    print("se encontro solución inicial factible :)")
-                    rutas = self.cargarRutas(R, capacidad,G)
+                    rutas = self.cargarRutas(R, capacidad, G)
                     if len(rutas) > nroVehiculos:
                         self.eliminarRutasSobrantes(rutas, nroVehiculos, capacidad)
                     
                     if rutas != []:
+                        print("se encontro solución inicial factible :)")
                         sol_factible = True
                     else:
                         strSolInicial = 3
@@ -213,7 +202,7 @@ class Solucion(Grafo):
         
         return indMasCercano
 
-    def cargarRutas(self, rutas, capacidad,gr):
+    def cargarRutas(self, rutas, capacidad, gr):
         R = []
         t = time()
         print("Se inició cargarRutas")
@@ -356,17 +345,17 @@ class Solucion(Grafo):
                 _lambda = 0.1 
                 mu = 2
                 ni = 2 
-            #     rutas = []
-            # elif(iteracion < 2):
-            #     _lambda += 0.5
-            #     mu -= 0.1
-            #     ni -= 0.1
-            #     rutas = []
-            # else:
-            #     _lambda += 0.1
-            #     mu -= 0.1
-            #     ni -= 0.1
-            # iteracion +=1
+                rutas = []
+            elif(iteracion < 2):
+                _lambda += 0.5
+                mu -= 0.1
+                ni -= 0.1
+                rutas = []
+            else:
+                _lambda += 0.1
+                mu -= 0.1
+                ni -= 0.1
+            iteracion +=1
 
         print("tiempo clarke wright ", time()-t)
         return rutas, _lambda, mu, ni, iteracion
