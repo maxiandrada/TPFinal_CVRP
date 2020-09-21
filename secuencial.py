@@ -163,14 +163,29 @@ def cargarDesdeFile2(pathArchivo):
                 demandas.append(float(splitLinea[1]))
         return nroVehiculos, optimo, capacidad, matrizDist, demandas     
 
-
+#Si el path es de una carpeta, se resuelven todas las intancias que están adentro.
 direccion = sys.argv[1]  
 
-nombre = os.path.basename(direccion)
+if os.path.isdir(direccion):
+    from os import listdir
+    from os.path import isfile, join
+    archivos = [join(direccion, f) for f in listdir(direccion) if isfile(join(direccion, f))]
+    print(direccion)
+    print(archivos)
+    for a in archivos:
+        nroVehiculos, optimo, capacidad, matrizDist, demandas = cargarDesdeFile2(a)
+        nombre = os.path.basename(a)
+        print("\n****Se está cargando ", nombre)
+        tenureADD = 1
+        tenureDROP = 2
+        time = sys.argv[2]
+        cvrp = CVRP(matrizDist, demandas, nroVehiculos, capacidad, nombre+"_"+str(time)+"min", 'secuencial_', 0, tenureADD, tenureDROP, time, 0, optimo)
 
-nroVehiculos, optimo, capacidad, matrizDist, demandas = cargarDesdeFile2(direccion)
-tenureADD = 1
-tenureDROP = 2
-time = sys.argv[2]
-cvrp = CVRP(matrizDist, demandas, nroVehiculos, capacidad, nombre+"_"+str(time)+"min", 'secuencial_', 0, tenureADD, tenureDROP, time, 0, optimo)
-#cvrp.tabuSearch()
+
+else:
+    nombre = os.path.basename(direccion)
+    nroVehiculos, optimo, capacidad, matrizDist, demandas = cargarDesdeFile2(direccion)
+    tenureADD = 1
+    tenureDROP = 2
+    time = sys.argv[2]
+    cvrp = CVRP(matrizDist, demandas, nroVehiculos, capacidad, nombre+"_"+str(time)+"min", 'secuencial_', 0, tenureADD, tenureDROP, time, 0, optimo)

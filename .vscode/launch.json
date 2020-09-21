@@ -10,12 +10,12 @@
             "type": "python",
             "request": "launch",
             "program": "secuencial.py",
-            "args": [
+            "args2": [
                 "Instancias/Set M/M-n200-k16.vrp",
                 "10"
             ],
-            "args2": [
-                "Instancias/Set E/E-n30-k3.vrp",
+            "args": [
+                "Instancias/Golden/",
                 "10"
             ],
             "console": "integratedTerminal"

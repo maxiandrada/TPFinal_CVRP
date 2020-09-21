@@ -1,5 +1,5 @@
 NAME: Golden_1
-COMMENT: (Augerat et al, Min no of trucks: 9, Optimal value: 5623.47)
+COMMENT: (Min no of trucks: 9, Optimal value: 5623.47)
 TYPE: CVRP
 DIMENSION: 241
 DISTANCE: 650.00000
