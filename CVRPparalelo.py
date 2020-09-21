@@ -20,9 +20,11 @@ class CVRPparalelo:
         self.__tiempoMPI = 0
         self.__rank = self.__comm.Get_rank()
         self.__poolSol = []
-        self.__contSol = 0
+        self.__indOpt_PR = 0
         self.__solPR = []
         self.__c = None
+
+
         self._G = Grafo(M, D)                #Grafo original
         self.__S = Solucion(M, D, sum(D))    #Solucion general del CVRP
         self.__Distancias = M                #Mareiz de distancias
@@ -201,13 +203,11 @@ class CVRPparalelo:
         self.__tiempoMPI = tiempoMax / cantIntercambios
         tCoord = time()
         nroIntercambios = 0
-        indPoolSol = -1
-        bandera = True #Bandera para forzar detención de ejecución
-        condMPIopt = True
+        bandera = True #Bandera para forzar detención de ejecución de los nodos
         contEstanOpt = 0
         cantMaxEstancOpt = 5
-        cantMaxPR = 7
-        cantPR = 0
+        # cantMaxPR = 7
+        # cantPR = 0
         condEstancPathRelinking = True
 
 
@@ -216,19 +216,9 @@ class CVRPparalelo:
                 bandera = False
                 nroIntercambios, bandera, tCoord = self.__paralelismo(True, tCoord, nroIntercambios, bandera)
             if(cond_Optimiz):
-                # tiempoInicial = 0
-                # tiempoFinal = 0
-                # tiempoInicial = time()
                 ind_permitidos = self.getPermitidos(Aristas_Opt, self.__umbralMax, solucion_refer)    #Lista de elementos que no son tabu
-                # tiempoFinal = time()
-                #print("Tiempo de ejecucion: ", (tiempoFinal - tiempoInicial), " seg.")
-                #print("indPermitidos: "+str(ind_permitidos))
-                #print("LenIndPerm: ", len(ind_permitidos))
-                #print("LenAristas: ", len(Aristas_Opt))
 
-                #print("Aristas: "+str(Aristas))
                 self.__umbralMin = 0
-                #a = 1/0
             cond_Optimiz = False
             ADD = []
             DROP = []
@@ -272,7 +262,7 @@ class CVRPparalelo:
                     self.__rutas = nuevas_rutas
                     self.__beta = 1
                     tiempoEstancamiento = time()
-                    if(len(self.__optimosLocales) >= 20):
+                    if(len(self.__optimosLocales) >= 10):
                         self.__optimosLocales.pop(0)
                     self.__optimosLocales.append(nuevas_rutas)
                     indOptimosLocales = -2
@@ -474,14 +464,13 @@ class CVRPparalelo:
         #Fin del while. Imprimo los valores obtenidos
         self.escribirDatosFinales(tiempoIni, iterac, tiempoEstancamiento)
         
-    def __paralelismo(self, cond, tCoord, nroIntercambios, bandera):      
-        # b = [x for x in range(self.__size)]
+    def __paralelismo(self, cond, tCoord, nroIntercambios, bandera):
         if cond:
             nroIntercambios +=1
             print ("Intercambio %d con %f de dif. de tiempo <<<<--------------------------------------- MPI nodo %d <<<<---------------------------------"%(nroIntercambios, (time()-tCoord)-self.__tiempoMPI, self.__rank))
             
-            listaS = self.__comm.allgather((self.__S, self.__rank, self.__rutas, self.__contSol, self.__optimosLocales[-1], bandera, )) #solucion_refer, Aristas, lista_tabu, nueva_solucion, ind_permitidos, ind_permitidos, self.__rutas, Aristas, lista_tabu, ind_permitidos, rutas_refer, self._G, nueva_solucion
-            
+            listaS = self.__comm.allgather((self.__S, self.__rank, self.__rutas, self.__indOpt_PR, self.__optimosLocales[self.__indOpt_PR%10], bandera, )) #solucion_refer, Aristas, lista_tabu, nueva_solucion, ind_permitidos, ind_permitidos, self.__rutas, Aristas, lista_tabu, ind_permitidos, rutas_refer, self._G, nueva_solucion
+            self.__indOpt_PR += 1    
             bandera = False not in [t[5] for t in listaS]   #si no hay False en la lista entonces los nodos siguen ejecutando
             self.__beta = self.__rank + 1
             if self.__rank == 0:
@@ -492,22 +481,6 @@ class CVRPparalelo:
                 self.__umbralMin = self.calculaUmbral(self.__S.getCostoAsociado())
                 self.__beta += 1
                 self.__umbralMax = self.calculaUmbral(self.__S.getCostoAsociado())
-
-            """
-            nodo 0:
-            beta = 1
-            umbralMax = calculaUmbral(costoSol, beta)
-
-            nodo 1:
-            beta = 2
-            umbralMin = calculaUmbral(costoSol, beta = 1)
-            umbralMax = calculaUmral(costoSol, beta = 2)
-
-            nodo 2: 
-            beta = 3
-            umbralMin = calculaUmbral(costoSol, beta = 2)
-            umbralMax = calculaUmral(costoSol, beta = 3)
-            """
 
             for z in listaS:
                 if not self.__rank == z[1]:

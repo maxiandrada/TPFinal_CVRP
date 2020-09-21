@@ -205,7 +205,7 @@ def ejecutaParalelismo(direccion, tiempo):
             tenureADD, 
             tenureDROP, 
             tiempo, 
-            0.1,
+            -10.0,
             optimo,
             rank=rank
             )
@@ -246,7 +246,7 @@ def ejecutaParalelismo(direccion, tiempo):
             tenureADD, 
             tenureDROP, 
             tiempo, 
-            0.1, 
+            -10.0, 
             optimo,
             rutasIniciales=rutas,
             rank = rank)

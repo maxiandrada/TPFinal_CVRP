@@ -35,7 +35,7 @@ class CVRP:
         self.__tenureMaxADD = int(tADD*1.7)
         self.__tenureDROP =  tDROP
         self.__tenureMaxDROP = int(tDROP*1.7)
-        self.__txt = clsTxt(str(archivo), str(carpeta), )
+        self.__txt = clsTxt(str(archivo), str(carpeta), "nada", "nada")
         self.__tiempoMaxEjec = float(tiempo)
         self.escribirDatos()
         
