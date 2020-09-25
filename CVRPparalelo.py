@@ -19,6 +19,8 @@ class CVRPparalelo:
         self.__comm = MPI.COMM_WORLD
         self.__tiempoMPI = 0
         self.__rank = self.__comm.Get_rank()
+        self.__size = self.__comm.Get_size()
+        self.__rankInd = self.__rank
         self.__poolSol = []
         self.__indOpt_PR = 0
         self.__solPR = []
@@ -199,22 +201,25 @@ class CVRPparalelo:
         print("Costo sol Inicial: "+str(self.__S.getCostoAsociado())+"      ==> Optimo: "+str(self.__optimo)+"  Desvio: "+str(round(porcentaje*100,3))+"%")
         
 
-        cantIntercambios = int(self.__tiempoMaxEjec*4)
+        cantIntercambios = int(self.__tiempoMaxEjec*3)
         self.__tiempoMPI = tiempoMax / cantIntercambios
         tCoord = time()
         nroIntercambios = 0
         bandera = True #Bandera para forzar detención de ejecución de los nodos
         contEstanOpt = 0
-        cantMaxEstancOpt = 5
+        cantMaxEstancOpt = 10
+        condEstancPathRelinking = True
+        contPR = 0
+        maxPR = self.__S.getGrado()**0.3
+        encontro = False
         # cantMaxPR = 7
         # cantPR = 0
-        condEstancPathRelinking = True
 
 
         while(tiempoEjecuc < tiempoMax and bandera): #bandera para forzar detención de todos los nodos
             if not porcentaje*100 > self.__porcentajeParada:
                 bandera = False
-                nroIntercambios, bandera, tCoord = self.__paralelismo(True, tCoord, nroIntercambios, bandera)
+                nroIntercambios, bandera, tCoord, encontro = self.__paralelismo(True, tCoord, nroIntercambios, bandera, encontro)
             if(cond_Optimiz):
                 ind_permitidos = self.getPermitidos(Aristas_Opt, self.__umbralMax, solucion_refer)    #Lista de elementos que no son tabu
 
@@ -223,7 +228,7 @@ class CVRPparalelo:
             ADD = []
             DROP = []
 
-            nroIntercambios, bandera, tCoord = self.__paralelismo((time () - tCoord > self.__tiempoMPI), tCoord, nroIntercambios, bandera)
+            nroIntercambios, bandera, tCoord, encontro = self.__paralelismo((time () - tCoord > self.__tiempoMPI), tCoord, nroIntercambios, bandera, encontro)
             
             ind_random = np.arange(0,len(ind_permitidos))
             random.shuffle(ind_random)
@@ -262,12 +267,13 @@ class CVRPparalelo:
                     self.__rutas = nuevas_rutas
                     self.__beta = 1
                     tiempoEstancamiento = time()
-                    if(len(self.__optimosLocales) >= 10):
+                    if(len(self.__optimosLocales) >= 20):
                         self.__optimosLocales.pop(0)
                     self.__optimosLocales.append(nuevas_rutas)
                     indOptimosLocales = -2
                     cond_Estancamiento = False
                     contEstanOpt = 0      #Cuando vuelve a cero ya no usamos PATH RELINKING
+                    encontro = True     #Para decir a los otros nodos si es que se encontró una nueva solución (y saber si hay elemento nuevos en opt loc's)
                     print(cad)
                 else:
                     cad = "\nSolucion peor. Costo: "+str(nueva_solucion.getCostoAsociado())
@@ -279,17 +285,12 @@ class CVRPparalelo:
                 tenureDROP = self.__tenureMaxDROP
                 cond_Optimiz = True
                 # Aristas = Aristas_Opt
-                if len(self.__solPR) > 0 and contEstanOpt > cantMaxEstancOpt:
-                    # print ("NODO %d ENCONTRÓ UNA SOLUCIÓN PATH RELINKING"%(self.__rank))
-                    iteracEstancamiento = 0
-                    iteracEstancMax = 20
-                else:
-                    iteracEstancamiento = 1
-                    iteracEstancMax = 100
+                iteracEstancamiento = 1
+                iteracEstancMax = 100
                 self.__txt.escribir("\nADD: "+str(aristasADD))
                 self.__txt.escribir("\nDROP: "+str(aristasDROP))
             #Si se estancó, tomamos a beta igual a 2
-            elif(iteracEstancamiento > iteracEstancMax and self.__beta < 2 and ind_permitidos != []):
+            elif(iteracEstancamiento > iteracEstancMax and self.__beta < 2 and contEstanOpt < cantMaxEstancOpt and ind_permitidos != []):
                 tiempoTotal = time()-tiempoEstancamiento
                 print("Se estancó durante %d min %d seg. Incrementanos Beta para diversificar en nodo %d. Cant estancamientos: %d" %(int(tiempoTotal/60), int(tiempoTotal%60), self.__rank,contEstanOpt))
                 self.__beta = 2
@@ -327,7 +328,7 @@ class CVRPparalelo:
             
             #CONDICION PARA MPI. Si se estancó y el pool de soluciones tiene elementos entonces partimos de ahi
             elif(iteracEstancamiento > iteracEstancMax and len(self.__poolSol) > 0):
-                nuevas_rutas = self.__poolSol.pop(len(self.__poolSol)-1)
+                nuevas_rutas = self.__poolSol.pop(-1)
                 nueva_solucion = self.cargaSolucion(nuevas_rutas)
                 costo = nueva_solucion.getCostoAsociado()
                 tiempoTotal = time()-tiempoEstancamiento
@@ -350,12 +351,14 @@ class CVRPparalelo:
             elif iteracEstancamiento >iteracEstancMax and len(self.__solPR) > 0 and contEstanOpt > cantMaxEstancOpt and ind_permitidos != []:
                 cad = "\n+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+- Iteracion %d nodo %d +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-\n" %(iterac, self.__rank)
                 self.__txt.escribir(cad)
+                
                 if condEstancPathRelinking:
-                    S = self.__solPR.pop(-1)
-                    G = copy.deepcopy(self.__optimosLocales[-1])
+                    G = self.__solPR.pop(-1)
+                    S = self.__optimosLocales[-1]
                 
                 nuevas_rutas = self.pathRelinking(S, G)
-                if(nuevas_rutas == []):
+                if nuevas_rutas == [] or contPR > maxPR:
+                    contPR = 0
                     condEstancPathRelinking = True
                     contEstanOpt = 0
                     nuevas_rutas = self.__solPR.pop(-1)
@@ -364,6 +367,7 @@ class CVRPparalelo:
                     tiempoTotal = time()-tiempoEstancamiento
                     cad = "Se estancó en Path Relinking durante %d min %d seg en NODO %d. Partimos de otra solucion inicial    " %(int(tiempoTotal/60), int(tiempoTotal%60), self.__rank)
                 else:
+                    contPR += 1
                     condEstancPathRelinking = False
                     nueva_solucion = self.cargaSolucion(nuevas_rutas)
                     costo = nueva_solucion.getCostoAsociado()
@@ -400,7 +404,7 @@ class CVRPparalelo:
                     print("\nRutas: "+str(nueva_solucion.getV()))
                     print("Fallo")
                     1/0
-                if(len(self.__optimosLocales) >= 10):
+                if(len(self.__optimosLocales) >= 20):
                     self.__optimosLocales.pop(0)
                 self.__optimosLocales.append(nuevas_rutas)
                 
@@ -464,65 +468,80 @@ class CVRPparalelo:
         #Fin del while. Imprimo los valores obtenidos
         self.escribirDatosFinales(tiempoIni, iterac, tiempoEstancamiento)
         
-    def __paralelismo(self, cond, tCoord, nroIntercambios, bandera):
+    def __paralelismo(self, cond, tCoord, nroIntercambios, bandera, encontro):
+        aux_encontro = encontro
         if cond:
+            aux_encontro = False
             nroIntercambios +=1
             print ("Intercambio %d con %f de dif. de tiempo <<<<--------------------------------------- MPI nodo %d <<<<---------------------------------"%(nroIntercambios, (time()-tCoord)-self.__tiempoMPI, self.__rank))
-            
-            listaS = self.__comm.allgather((self.__S, self.__rank, self.__rutas, self.__indOpt_PR, self.__optimosLocales[self.__indOpt_PR%10], bandera, )) #solucion_refer, Aristas, lista_tabu, nueva_solucion, ind_permitidos, ind_permitidos, self.__rutas, Aristas, lista_tabu, ind_permitidos, rutas_refer, self._G, nueva_solucion
-            self.__indOpt_PR += 1    
+            optLen = len(self.__optimosLocales)
+            listaS = self.__comm.allgather((self.__S, self.__rank, self.__rutas, encontro, self.__optimosLocales[self.__indOpt_PR%optLen], bandera)) #solucion_refer, Aristas, lista_tabu, nueva_solucion, ind_permitidos, ind_permitidos, self.__rutas, Aristas, lista_tabu, ind_permitidos, rutas_refer, self._G, nueva_solucion
+            self.__indOpt_PR += 1
             bandera = False not in [t[5] for t in listaS]   #si no hay False en la lista entonces los nodos siguen ejecutando
-            self.__beta = self.__rank + 1
+            encontro = True in [t[3] for t in listaS]
+            
+            self._beta = self.__rank + 1
             if self.__rank == 0:
                 self.__umbralMin = 0
-                self.__umbralMax = self.calculaUmbral(self.__S.getCostoAsociado())
+                self._umbralMax = self.calculaUmbral(self.__S.getCostoAsociado())
             else:
                 self.__beta -= 1
-                self.__umbralMin = self.calculaUmbral(self.__S.getCostoAsociado())
+                self._umbralMin = self.calculaUmbral(self.__S.getCostoAsociado())
                 self.__beta += 1
-                self.__umbralMax = self.calculaUmbral(self.__S.getCostoAsociado())
+                self._umbralMax = self.calculaUmbral(self.__S.getCostoAsociado())
+            # self.__beta = self.__rankInd%self.__size + 1
+            # if self.__rank == self.__rankInd%self.__size:
+            #     self.__umbralMin = 0
+            #     self.__umbralMax = self.calculaUmbral(self.__S.getCostoAsociado())
+            # else:
+            #     self.__beta -= 1
+            #     self.__umbralMin = self.calculaUmbral(self.__S.getCostoAsociado())
+            #     self.__beta += 1
+            #     self.__umbralMax = self.calculaUmbral(self.__S.getCostoAsociado())
+            # self.__rankInd += 1
 
             for z in listaS:
                 if not self.__rank == z[1]:
                     self.__solPR.append(z[4])
             
-            smCosto = listaS[0]
-            for i in range(1,len(listaS)):
-                if(listaS[i][0].getCostoAsociado() < smCosto[0].getCostoAsociado()):
-                    smCosto = listaS[i]
-            self.__S = copy.deepcopy(smCosto[0])
-            self.__rutas = copy.deepcopy(smCosto[2])
+            if encontro:
+                smCosto = listaS[0]
+                for i in range(1,len(listaS)):
+                    if(listaS[i][0].getCostoAsociado() < smCosto[0].getCostoAsociado()):
+                        smCosto = listaS[i]
+                self.__S = copy.deepcopy(smCosto[0])
+                self.__rutas = copy.deepcopy(smCosto[2])
 
-            # Eliminamos repetidos
-            i = 0
-            while i < len(listaS):
-                j=i+1
-                while j < len(listaS):
-                    if listaS[i][0] == listaS[j][0]:
-                        listaS.pop(j)
-                        print ("Se quitó una solución repetida en nodo %d"%(self.__rank))
-                    else:
-                        j+=1
-                i+=1
-            # Eliminamos optimos locales que ya existen en las soluciones
-            i = 0
-            while i < len(self.__poolSol):
-                j = i
-                while j < len(listaS):
-                    costo = abs(self.getCostoAsociadoRutas(self.__poolSol[i]) - self.getCostoAsociadoRutas(listaS[j][2]))
-                    if costo<0.0001:
-                        listaS.pop(j)
-                        print ("Se quitó una solución repetida con el mismo peso que un óptimo local en nodo %d"%(self.__rank))
-                    else:
-                        j+=1
-                i+=1
-            for tupla in listaS:
-                self.__poolSol.append(tupla[2])
-            self.__poolSol.append(copy.deepcopy(self.__rutas))
-            while len(self.__poolSol) >= 15:
-                self.__poolSol.pop(0)
+                # Eliminamos repetidos
+                i = 0
+                while i < len(listaS):
+                    j=i+1
+                    while j < len(listaS):
+                        if listaS[i][0] == listaS[j][0]:
+                            listaS.pop(j)
+                            print ("Se quitó una solución repetida en nodo %d"%(self.__rank))
+                        else:
+                            j+=1
+                    i+=1
+                # Eliminamos optimos locales que ya existen en las soluciones
+                i = 0
+                while i < len(self.__poolSol):
+                    j = i
+                    while j < len(listaS):
+                        costo = abs(self.getCostoAsociadoRutas(self.__poolSol[i]) - self.getCostoAsociadoRutas(listaS[j][2]))
+                        if costo<0.0001:
+                            listaS.pop(j)
+                            print ("Se quitó una solución repetida con el mismo peso que un óptimo local en nodo %d"%(self.__rank))
+                        else:
+                            j+=1
+                    i+=1
+                for tupla in listaS:
+                    self.__poolSol.append(tupla[2])
+                self.__poolSol.append(copy.deepcopy(self.__rutas))
+                while len(self.__poolSol) >= 15:
+                    self.__poolSol.pop(0)
             tCoord = time()
-        return nroIntercambios, bandera, tCoord
+        return nroIntercambios, bandera, tCoord, aux_encontro
 
     def getPermitidos(self, Aristas, umbral, solucion):
         AristasNuevas = []
