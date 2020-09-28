@@ -761,12 +761,11 @@ class Solucion(Grafo):
                 A_r1_left.extend(A_r2_right)
                 A_r2_left.append(A_r_add)
                 A_r2_left.extend(A_r1_right)
-
             else:
                 A_r1_left = A_r1[:ind_A[0]-1]
                 A_r1_right = A_r1[ind_A[0]:]
                 A_r1_drop = A_r1[ind_A[0]-1]
-                        
+                  
                 A_r2_left = A_r2[:ind_A[1]+1]
                 A_r2_right = A_r2[ind_A[1]+2:]                
                 A_r2_drop = A_r2[ind_A[1]+1]
@@ -2406,7 +2405,7 @@ class Solucion(Grafo):
                 A.pop(ind_A[1]+2)
                 A.insert(ind_A[1]+1,antB)
                 A.pop(ind_A[1]+2)
-            elif opcion == 3 or opcion == 4:    
+            elif opcion == 3 or opcion == 4: 
                 if opcion == 3:
                     pass
                 elif opcion == 4:
@@ -2462,17 +2461,18 @@ class Solucion(Grafo):
         RF = [rutas[i] for i in range(len(rutas)) if i not in indRS]
         RF = self.rutasDemandaOrdenada(RF)
         iterac = 0
-
+        costoAntes = sum([x.getCostoAsociado() for x in rutas])
+        print("Costo antes ", costoAntes)
         for rutaSobrante in RS:
             iterac += 1
             verticesRuta, indiceV = self.demandasOrdenadas(rutaSobrante, desc=True, index=True)
             verticesRuta = verticesRuta[:-1]
             indiceV = indiceV[:-1]
-            while len(verticesRuta)!=0:
+            while len(verticesRuta)!=0 and len(rutas) != nroVehiculos:
                 capacidadNecesaria = capacidad - verticesRuta[0].getDemanda()
                 RC = self.rutasConCapacidadDisponible(RF, capacidadNecesaria)
                 if len(RC) == 0:
-                    self.depurarRutas(RF, capacidadNecesaria, capacidad)
+                    self.depurarRutas(RF, capacidadNecesaria, capacidad, 3)
                     RC = self.rutasConCapacidadDisponible(RF, capacidadNecesaria)
                 if len(RC) != 0:
                     self.insertarEnMejorUbicacion(verticesRuta[0], indiceV[0], rutaSobrante,RC)
@@ -2483,17 +2483,17 @@ class Solucion(Grafo):
             if iterac > 10:
                 rutas = []
                 return rutas
-
         for i in indRS:
             rutas.pop(i)
         for x in rutas:
             x.cargarDesdeSecuenciaDeVertices(x.getV())
-        
-        #print(rutas)
 
+        costoDespues = sum([x.getCostoAsociado() for x in rutas])
+        print("Costo después ", costoDespues)
+        
         return rutas
 
-    def depurarRutas(self, rutas, cantidadNecesaria, capacidad):
+    def depurarRutas(self, rutas, cantidadNecesaria, capacidad, rec):
         """
             1) Buscar la ruta que más espacio disponible tenga, guardar en variable rutaConMasEspacio
             2) Armar una lista de vértices, ordenando ascendentemente según la demanda, en variable verticesDemandaDesc
@@ -2507,7 +2507,7 @@ class Solucion(Grafo):
         """
         i = 0
         demandaRutaActual = float("inf")
-        while i < len(rutas) and demandaRutaActual >= cantidadNecesaria:
+        while i < len(rutas) and demandaRutaActual > cantidadNecesaria:
             #rutaConMasEspacio = self.rutasDemandaOrdenada(rutas)[:i+1][0]
             rutaConMasEspacio, indRutaConMasEspacio = self.rutasMasDivisibles(rutas)
             rutaConMasEspacio = rutaConMasEspacio[:i+1][0]
@@ -2518,13 +2518,21 @@ class Solucion(Grafo):
             verticesDemandaDesc = verticesDemandaDesc[:-1]
             indicesV = indicesV[:-1]
             seguir = True
-            while len(verticesDemandaDesc) != 0 and demandaRutaActual >= cantidadNecesaria and seguir:
+            while len(verticesDemandaDesc) != 0 and demandaRutaActual > cantidadNecesaria and seguir:
                 x = verticesDemandaDesc.pop()
                 j = indicesV.pop()
                 RC = self.rutasConCapacidadDisponible(rutasRestantes, capacidad - x.getDemanda())
                 if len(RC) == 0:
-                    seguir = False
-                else:
+                    if rec != 0:
+                        RC = self.depurarRutas(rutasRestantes, capacidad - x.getDemanda(), capacidad, rec-1)
+                        if len(RC) == 0:
+                            if rec != 0:
+                                return []
+                            else:
+                                seguir = False
+                    else:
+                        seguir = False
+                if len(RC) != 0:
                     self.insertarEnMejorUbicacion(x, j, rutaConMasEspacio, RC)
                     verticesDemandaDesc, indicesV = self.demandasOrdenadas(rutaConMasEspacio, desc=True, index=True)
                     verticesDemandaDesc = verticesDemandaDesc[:-1]
@@ -2532,8 +2540,9 @@ class Solucion(Grafo):
                     demandaRutaActual = rutaConMasEspacio.getCapacidad()
             i += 1
 
+        return RC
     def rutasMasDivisibles(self, rutas):
-        """ Si, algo feo el nombre de la función. Pendiente, buscar un mejor nombre
+        """ Si, algo feo el nombre de la función. Pendiente, buscar un mejor nombre.
             Esta función va a retornar una lista de rutas con sus respectivos índicas
             ordenadas según la cantidad de vértices con menor demandañ
             Se ordena las rutas por según el valor del primer cuartil.
@@ -2545,24 +2554,29 @@ class Solucion(Grafo):
         i = 0
         for r in rutasConVerticesOrdenados:
             n = len(r[1:])
-            indices = list(range(1,n+1))
-            if n % 2:
-                indMed = int((indices[int(n/2)] + indices[int(n/2) + 1])/2)
-                mediana = r[indMed]
-                indPriCuartil = int((indices[int(n/4)] + indices[int(n/4) + 1])/2)
+            if n > 4:
+                indices = list(range(1,n+1))
+                if n % 2:
+                    indMed = int((indices[int(n/2)] + indices[int(n/2) + 1])/2)
+                    mediana = r[indMed]
+                    indPriCuartil = int((indices[int(n/4)] + indices[int(n/4) + 1])/2)
+                else:
+                    indMed = int(n/2) + 1
+                    mediana = r[indMed]
+                    indPriCuartil = int(n/4) + 1
+                tamQ = len(r[:indPriCuartil])
+                q = (i, tamQ, r[indPriCuartil].getDemanda())
+                Q.append(q)
             else:
-                indMed = int(n/2) + 1 
-                mediana = r[indMed]
-                indPriCuartil = int(n/4) + 1
-            q = (i, r[indPriCuartil].getDemanda(), indPriCuartil)
-            Q.append(q)
+                q = (i, float("inf"), float("inf"))
+                Q.append(q)
             i+=1
-        Q = sorted(Q, key=lambda x: x[1])
-
+            #print(f"Tamaño primer cuartil ruta {tamQ}")
+        Q = sorted(Q, key=lambda x: (x[2], x[1]))
         ret = [rutas[q[0]] for q in Q]
         ind = [q[0] for q in Q]
+
         #[print("Ruta " + str(q[2]) + " --> primer cuartil: " + str(q[1]) + "\n") for q in Q]
-        
         return ret, ind
 
     def rutasDemandaOrdenada(self, rutas, desc=False):
@@ -2580,15 +2594,18 @@ class Solucion(Grafo):
         for r in range(len(rutas)):
             verticesRuta = rutas[r].getV()
             for i in range(len(verticesRuta)):
-                if i < len(verticesRuta):
-                    costo = M[i][v.getValue()-1] + M[i+1][v.getValue()-1]
+                if i < len(verticesRuta) and i == 0:
+                    costo = M[i][v.getValue()-1] + M[verticesRuta[i+1].getValue()-1][v.getValue()-1]
+                elif i < len(verticesRuta):
+                    costoAnterior = M[verticesRuta[i-1].getValue()-1][v.getValue()-1] #Es el costo entre el vértice anterior y v
+                    costoSiguiente = M[v.getValue()-1][verticesRuta[i].getValue()-1] #Es el costo entre el vértice siguiente y v
+                    costo = costoAnterior + costoSiguiente
                 else:
-                    costo = M[i][v.getValue()-1] + M[1][v.getValue()-1]
+                    costo = M[i][v.getValue()-1] + M[1][v.getValue()-1] #Para que tenga en cuenta al depósito
                 if costo <= costoMin:
                     costoMin = costo
                     indMejorUbicacion = i
                     indMejorRuta = r
-        #print(costoMin)
 
         ruta.getV().pop(ind) #Es 1 para no borrar el depósito
         ruta.setCapacidad(ruta.getCapacidad() - v.getDemanda())
@@ -2613,7 +2630,7 @@ class Solucion(Grafo):
         """ Retorna los/s índice/s de las ruta/s con menos demanda dependiendo de cuantas sobren
             Con "sobrar" me refiero a que la cantidad de rutas sobrepasa la cantidad de vehículos mínima
         """
-        cantidadSobrante = len(rutas) - nroVehiculos 
+        cantidadSobrante = len(rutas) - nroVehiculos
         if cantidadSobrante > 0:
             ind = []
             indicesRutas = list(range(len(rutas)))
@@ -2629,19 +2646,6 @@ class Solucion(Grafo):
             return ind
         else:
             return []
-
-    def sizeOf(self, obj):
-        tam = sys.getsizeof(obj)
-        k = 1000
-        #print(tam)
-        if tam> k**3:
-            print(str(int(tam/(k**3))) + " GB y"+str(tam%(k**3))+" MB's")
-        elif tam> k**2:
-            print(str(int(tam/(k**2))) + " MB y"+str(tam%(k**2))+" KB's")
-        elif tam >= k**1:
-            print(str(int(tam/(k**1)))+ " KB y"+str(tam%(k**1))+" bytes")
-        else:
-            print(str(tam) + " Bytes")
 
     def controlaCapacidad(self, rutas, capMax):
         for r in rutas:
