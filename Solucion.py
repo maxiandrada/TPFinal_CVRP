@@ -1240,7 +1240,8 @@ class Solucion(Grafo):
             V_origen = r1.getA()[ind_A[0]-1].getOrigen()
             V_destino = r1.getA()[ind_A[0]].getDestino()
             peso = self._matrizDistancias[V_origen.getValue()-1][V_destino.getValue()-1]
-            A_r1_add = Arista(V_origen, V_destino, peso)
+            A_r1_add = Arista(V_origen, V_destino, peso, len(self._matrizDistancias))
+            
             #print("A_r1_add: "+str(A_r1_add))
             #costo_r1_add = peso
 
