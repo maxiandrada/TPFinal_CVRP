@@ -1,7 +1,7 @@
 from Vertice import Vertice
 
 class Arista():
-    def __init__(self,origen,destino,peso, tam = None):
+    def __init__(self,origen,destino,peso,tam = None):
         self._origen = origen
         self._destino = destino
         self._peso = peso
@@ -65,8 +65,8 @@ class Arista():
         return((self.__class__ == A.__class__) & neq)
 
     def __str__(self):
-        return "(" + str(self._origen) + "," + str(self._destino) + "," + str(self._peso) + ":" + str(self._id) + ")"
-        #return "(" + str(self._origen) + "," + str(self._destino) + "," + str(self._peso) + ")"
+        #return "(" + str(self._origen) + "," + str(self._destino) + "," + str(self._peso) + ":" + str(self._id) + ")"
+        return "(" + str(self._origen) + "," + str(self._destino) + "," + str(self._peso) + ")"
 
     def __repr__(self):
         return str(self)

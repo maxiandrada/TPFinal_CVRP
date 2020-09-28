@@ -3,7 +3,6 @@ import os
 import csv
 import re
 import ntpath
-
 class clsTxt:
     def __init__(self, nombreTxt, Carpeta):
         nombreTxt = nombreArchivo(nombreTxt)

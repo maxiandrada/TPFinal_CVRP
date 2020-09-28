@@ -167,4 +167,21 @@ nroVehiculos, optimo, capacidad, matrizDist, demandas = cargarDesdeFile2(direcci
 tenureADD = int(len(matrizDist)**(1/2.0))
 tenureDROP = int(len(matrizDist)**(1/2.0))+1
 time = 6.0
-cvrp = CVRP(matrizDist, demandas, nroVehiculos, capacidad, nombre+"_"+str(time)+"min", 'secuencial_', 0, tenureADD, tenureDROP, time, 0.1, optimo)
+#cvrp = CVRP(matrizDist, demandas, nroVehiculos, capacidad, nombre+"_"+str(time)+"min", 'secuencial_', 0, tenureADD, tenureDROP, time, 0.1, optimo)
+inf = float("inf")
+matrizDist = [[inf, 2 , 3 , 4 , 5 , 6 , 3.2, 4.4, 5.9, 2, 1, 0.1],
+              [7, inf , 8 , 9 , 10, 1.1, 3.3, 4.5,6.1, 3, 2, 0.3],
+              [12, 13 ,inf, 14, 15, 1.6, 3.4, 4.6,6.3, 4, 3, 0.4],
+              [17, 18 , 19,inf, 20, 21, 3.5, 4.7, 6.5, 5, 4, 0.5],
+              [22, 23 , 24, 25,inf, 26, 3.6, 4.8, 6.7, 6, 5, 0.6],
+              [27, 28 , 29, 30, 31,inf, 3.7, 4.9, 6.9, 7, 6, 0.7],
+              [38, 39 , 40, 41, 42, 43,inf, 5.0,  7.1, 8, 7, 0.8],
+              [51, 52 , 54, 55, 56, 57, 5.8,inf,  7.3, 9, 8, 0.9],
+              [75, 76 , 77, 78, 79, 80, 8.1, 8.2,inf, 10, 9, 1.1],
+              [12, 13 , 14, 15, 16, 17, 1.8, 19, 20, inf, 4, 1.2],
+              [1.2,1.3,1.4,1.5,1.6,1.7, 1.8,1.9,2.2,4.1 ,inf, 1.3],
+              [1.4,1.5,1.6,1.7,1.8,1.8, 2.1, 2 ,2.3,2.4 ,2.5, inf]
+            ]
+demandas =    [ 0, 1  ,  1,  1,  1,  1,  1,  1,  1, 0, 0, 0]
+capacidad = 6
+cvrp = CVRP(matrizDist, demandas, 2, capacidad, "prueba"+str(time)+"min", 'secuencial', 0, tenureADD, tenureDROP, time, 0, 1)

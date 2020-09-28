@@ -1,7 +1,7 @@
 import tkinter as tk
 import re
 import math
-from time import time
+import time
 from CVRP import CVRP
 from Vertice import Vertice
 import tkinter.filedialog
@@ -77,7 +77,7 @@ class Ventana(tk.Tk):
         self.__labelSolInicial.append(tk.Label(frame, text = "Solucion inicial"))
         self.__labelSolInicial[i].place(relx=0.2, rely=0.15)
         
-        self.__combo1list=['Clark & Wright','Vecino mas cercano','Secuencial','Al azar']
+        self.__combo1list=['Clark & Wright','Vecino mas cercano','Secuencial']
         self.__eSolInicial.append(tk.StringVar())
         self.__combo1.append(ttk.Combobox(frame, textvariable=self.__eSolInicial[i], values=self.__combo1list, width = 29, state = "disabled"))
         self.__combo1[i].place(relx=0.4, rely=0.15)
@@ -128,14 +128,11 @@ class Ventana(tk.Tk):
             print("Se resolverá "+ str(self.__cantidadResolver[i].get())+" veces "+ self.__nombreArchivo)
             for j in range(0,self.__cantidadResolver[i].get()):
                 print("RESOLVIENDO ------------------> "+str(self.__nombreArchivo))
-                solIni = self.getSolucionInicial(self.__eSolInicial[i].get())
-                if j == 1 or j == 2 or j == 3:
-                    solIni = j
-
                 self.__cvrp = CVRP(self.__matrizDistancias[i], self.__demanda[i], self.__nroVehiculos[i], self.__capacidad[i],
-                        self.__nombreArchivo+"_"+str(self.__eTime[i].get())+"min", self.__myFolder, solIni,
+                        self.__nombreArchivo+"_"+str(self.__eTime[i].get())+"min", self.__myFolder, self.getSolucionInicial(self.__eSolInicial[i].get()),
                         self.__boxADD[i].get(), self.__boxDROP[i].get(), self.__eTime[i].get(), self.__ePorcentaje[i].get(), self.__optimo[i])
                 j
+                self.__cvrp.tabuSearch()
 
     def getSolucionInicial(self,value):
         return self.__combo1list.index(value)
@@ -152,8 +149,8 @@ class Ventana(tk.Tk):
         # tenureADD = int(len(self.__matrizDistancias[i])**(1/2.0))
         # tenureDROP = int(len(self.__matrizDistancias[i])**(1/2.0))+1
 
-        tenureADD = int(len(self.__matrizDistancias[i])*0.08)
-        tenureDROP = int(len(self.__matrizDistancias[i])*0.08)+1
+        tenureADD = int(len(self.__matrizDistancias[i])*0.05)
+        tenureDROP = int(len(self.__matrizDistancias[i])*0.05)+1
         
         self.__combo1[i].configure(state = "readonly")
         self.__combo1[i].set('Clark & Wright')
@@ -181,9 +178,6 @@ class Ventana(tk.Tk):
         #Porcentaje
         self.__entryPorcentaje[i].configure(state = "normal", textvariable = self.__ePorcentaje[i])
         self.__ePorcentaje[i].set(0.1)
-
-        #Cantidad de veces a resolver
-        self.__cantidadResolver[i].set(4)
 
     def listToString(self, s): 
         str1 = ""  
@@ -266,10 +260,7 @@ class Ventana(tk.Tk):
             else:
                 coordenadas.append([splitLinea[0],splitLinea[1],splitLinea[2]]) #[[v1,x1,y1], [v2,x2,y2], ...]
         #print("coordenadas: "+str(coordenadas))
-        
-        tIni = time()
         self.cargaMatrizDistancias(coordenadas)
-        print("Tiempo cargar matriz: "+str(time()-tIni))
         
         #+-+-+-+-+-+-+-Para cargar la demanda+-+-+-+-+-+-+-
         seccionDemanda = [x for x in lineas[indSeccionCoord:] if re.findall(r"DEMAND_SECTION+",x)][0]

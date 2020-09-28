@@ -8,6 +8,17 @@ import math
 import numpy as np
 from time import time
 
+from Grafo import Grafo 
+from Vertice import Vertice 
+from Arista import Arista
+import copy
+import sys
+import random
+import math
+import numpy as np
+from time import time
+
+
 class Solucion(Grafo):
     def __init__(self, M, Demanda, capacidad,G=None,vacio=False):
         super(Solucion, self).__init__(M, Demanda,G,vacio=vacio)
@@ -75,12 +86,12 @@ class Solucion(Grafo):
                         #strSolInicial = 1
                     print("aún nada u.u Seguimos probando con otras variaciones")
                 else:
-                    rutas = self.cargarRutas(R, capacidad, G)
+                    print("se encontro solución inicial factible :)")
+                    rutas = self.cargarRutas(R, capacidad,G)
                     if len(rutas) > nroVehiculos:
                         self.eliminarRutasSobrantes(rutas, nroVehiculos, capacidad)
                     
                     if rutas != []:
-                        print("se encontro solución inicial factible :)")
                         sol_factible = True
                     else:
                         strSolInicial = 3
@@ -202,7 +213,7 @@ class Solucion(Grafo):
         
         return indMasCercano
 
-    def cargarRutas(self, rutas, capacidad, gr):
+    def cargarRutas(self, rutas, capacidad,gr):
         R = []
         t = time()
         print("Se inició cargarRutas")

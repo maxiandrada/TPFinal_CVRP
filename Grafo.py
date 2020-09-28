@@ -12,7 +12,7 @@ class Grafo:
             self._costoAsociado = 0
             self._V = []
             self._A = []
-            self._IdAristasUnicas = []
+            self._AristasUnicas = []
             self._grado = len(M)
             self._matrizDistancias = M
             self._demanda = D
@@ -36,14 +36,11 @@ class Grafo:
     def getGrado(self):
         return self._grado
 
-    def getIdAristasUnicas(self):
-        return self._IdAristasUnicas
-
     def getDemandaAcumulada(self):
         return self._demandaAcumulada
     
     def cargarDesdeAristas(self, A):
-        #t = time()
+        t = time()
         self._A = A
         V = []
         cap = 0
@@ -277,10 +274,6 @@ class Grafo:
                 aux = Arista(Vertice(fila+1, Demanda[fila]),Vertice(columna+1, Demanda[columna]),(Matriz[fila][columna]))
                 aux.setId(fila, columna, len(Matriz))
                 self._A.append(aux)
-                
-                if columna!= fila and columna > fila:
-                    self._IdAristasUnicas.append(aux.getId())
-
                 #aux = Arista(self._V[fila],self._V[columna],(Matriz[fila][columna]))
                 #aux.setId(fila, columna, len(Matriz))
                 #self._A.append(aux)
@@ -298,7 +291,7 @@ class Grafo:
 
     #Para que cargue desde una secuencia de vertices por ej. s1= [1,3,4,5,8,9,6,7] -> s2=[1,3,9,5,8,4,6,7]
     def cargarDesdeSecuenciaDeVertices(self,seq:list):
-        #t = time()
+        t = time()
         self._V = seq
         if(len(self._A)!=0):
             self._A = []

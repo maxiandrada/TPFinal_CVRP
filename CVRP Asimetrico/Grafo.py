@@ -32,10 +32,18 @@ class Grafo:
             self._matrizDistancias = M
             self._demanda = D
             self._demandaAcumulada = []
+            self._idListAristas = []
 
     def getGrado(self):
         return self._grado
-
+    def addIdListAristas(self, id):
+        self._idListAristas.append(id)
+    def borraIdListAristas(self):
+        self._idListAristas = []
+    def getIdListAristas(self):
+        return self._idListAristas
+    def extendIdListAristas(self, IdList):
+        self._idListAristas.extend(IdList)
     def getIdAristasUnicas(self):
         return self._IdAristasUnicas
 
@@ -50,6 +58,7 @@ class Grafo:
         costo = 0
         demAcum = 0
         self._demandaAcumulada = []
+        self.borraIdListAristas()
         for a in A:
             v = a.getOrigen()
             V.append(v)
@@ -57,6 +66,7 @@ class Grafo:
             cap += self._demanda[v.getValue()-1]
             demAcum += v.getDemanda()
             self._demandaAcumulada.append(demAcum)
+            self.addIdListAristas(a.getId())
         self._V = V
         self._costoAsociado = costo
         # print(f"CargaDesdeAristas: {time()-t}")
@@ -190,7 +200,7 @@ class Grafo:
         costo = 0
         demAcum = 0
         cap = 0
-        
+        self.borraIdListAristas()
         for i in range(0, len(secuencia)):
             x = secuencia[i]
             V.append(Vertice(int(x), self._demanda[x-1]))
@@ -204,6 +214,7 @@ class Grafo:
                 new_edge = Arista(Vfila, Vcol, dist)
                 new_edge.setId(fila, col, len(self._matrizDistancias))
                 self._A.append(new_edge)
+                self.addIdListAristas(new_edge.getId())
                 demAcum += new_edge.getOrigen().getDemanda()
                 self._demandaAcumulada.append(demAcum)
                 costo+=dist
@@ -273,6 +284,8 @@ class Grafo:
                 aux = Arista(Vertice(fila+1, Demanda[fila]),Vertice(columna+1, Demanda[columna]),(Matriz[fila][columna]))
                 aux.setId(fila, columna, len(Matriz))
                 self._A.append(aux)
+                # if columna!= fila and columna > fila:
+                #     self._IdAristasUnicas.append(aux.getId())
 
     def getVerticeInicio(self):
         return self._A[0].getOrigen()
@@ -293,6 +306,8 @@ class Grafo:
         costo = 0
         demAcum = 0
         cap = 0
+        new_edge = None
+        self.borraIdListAristas()
         for i in range(0,len(seq)):
             if(i< len(seq)-1):
                 fila = seq[i].getValue()-1
@@ -301,6 +316,7 @@ class Grafo:
                 new_edge = Arista(seq[i], seq[i+1], dist)
                 new_edge.setId(fila, col, len(self._matrizDistancias))
                 self.getA().append(new_edge)
+                self.addIdListAristas(new_edge.getId())
             else:
                 fila = seq[i].getValue()-1
                 col = 0
@@ -308,6 +324,7 @@ class Grafo:
                 new_edge = Arista(seq[i], seq[0], dist)
                 new_edge.setId(fila, col, len(self._matrizDistancias))
                 self.getA().append(new_edge)
+                self.addIdListAristas(new_edge.getId())
             demAcum += new_edge.getOrigen().getDemanda()
             self._demandaAcumulada.append(demAcum)
             costo+=dist
@@ -316,7 +333,37 @@ class Grafo:
 
         return cap
 
+    def getCostoSecVert(self, secV):
+        costo = 0
+        vAnt = secV[0]
+        # print("Sec V: "+str(secV))
+        for vSig in secV[1:]:
+            # print("Vant: "+str(vAnt))
+            # print("Vsig: "+str(vSig))
+            costoArista = self._matrizDistancias[vAnt.getValue()-1][vSig.getValue()-1]
+            costo += costoArista
+            vAnt = vSig
+        # print("Costo: ", costo)
+
+        return costo
+
+    def getCostoAristaInv(self, A):
+        # print("Ant: "+str(A))
+        # A_cp = copy.deepcopy(A)
+        # A_cp = self.invertirArista(A_cp)
+        # print("Inv: "+str(A_cp))
+        costo = self._matrizDistancias[A.getDestino().getValue()-1][A.getOrigen().getValue()-1]
+         
+        return costo
+
+    def invertirArista(self, A):
+        A.invertir()
+        peso = self._matrizDistancias[A.getOrigen().getValue()-1][A.getDestino().getValue()-1]
+        A.setPeso(peso)
+
+        return A
 
     def incrementaFrecuencia(self):
         for x in range(0,len(self.getA())):
             self.getA()[x].incFrecuencia()
+

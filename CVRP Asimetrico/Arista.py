@@ -36,10 +36,10 @@ class Arista():
         return self._peso
 
     def setId(self, fila, col, tam):
-        # if(fila<col):
-        #     id = fila*tam + col
-        # else:
-        id = col*tam + fila
+        if(fila<col):
+            id = fila*tam + col
+        else:
+            id = col*tam + fila
         
         self._id = id
 

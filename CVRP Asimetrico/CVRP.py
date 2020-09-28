@@ -42,8 +42,11 @@ class CVRP:
         self.__S.setCapacidadMax(self.__capacidadMax)
         tiempoIni = time()
         self.__rutas, self.__tipoSolucionIni = self.__S.rutasIniciales(self.__tipoSolucionIni, self.__nroVehiculos, self.__Demandas, self.__capacidadMax, self._G)        #print("tiempo solucion inicial: ", time()-tiempoIni)
+        
+        print("Matriz: "+str(M))
+        print("Sol Ini: "+str(self.__rutas))
+        
         self.__tiempoMaxEjec = self.__tiempoMaxEjec - ((time()-tiempoIni)/60)
-        #tiempoIni = time()
         self.__S, strText = self.cargaSolucion(self.__rutas)
         self.__txt.escribir(strText)
         
@@ -97,6 +100,8 @@ class CVRP:
             cap += s.getCapacidad()
             S.getA().extend(s.getA())
             S.getV().extend(s.getV())
+            idList = s.getIdListAristas()
+            S.extendIdListAristas(idList)
             sol_ini+="\nRuta #"+str(i+1)+": "+str(s.getV())
             #sol_ini+="\nAristas: "+str(s.getA())
             sol_ini+="\nCosto asociado: "+str(s.getCostoAsociado())+"      Capacidad: "+str(s.getCapacidad())+"\n"
@@ -107,6 +112,7 @@ class CVRP:
         S.setCostoAsociado(costoTotal)
         S.setCapacidad(cap)
         S.setCapacidadMax(self.__capacidadMax)
+
         # print(f"cargaSolucion: {time()-t}")
         return S, sol_ini
 
@@ -178,11 +184,17 @@ class CVRP:
         tiempo = time()
         Aristas_Opt = np.array([], dtype = object)
         
-        IdAristas = self._G.getIdAristasUnicas
-        A_G = self._G.getA()
+        # IdAristas = self._G.getIdAristasUnicas
+        # A_G = self._G.getA()
+        # for EP in self._G.getA():
+        #     if(EP.getOrigen().getValue() < EP.getDestino().getValue() and EP.getPeso() <= umbral):
+        #         aux = EP
+        #         Aristas_Opt = np.append(Aristas_Opt, EP)
+        #         ind_permitidos = np.append(ind_permitidos, EP.getId())
+        # ind_AristasOpt = copy.deepcopy(ind_permitidos)
+
         for EP in self._G.getA():
             if EP.getPeso() <= umbral:
-                aux = EP
                 Aristas_Opt = np.append(Aristas_Opt, EP)
                 ind_permitidos = np.append(ind_permitidos, EP.getId())
             # if(EP.getOrigen().getValue() < EP.getDestino().getValue() and EP.getPeso() <= umbral):
@@ -195,21 +207,21 @@ class CVRP:
         porcentaje = round(self.__S.getCostoAsociado()/self.__optimo -1.0, 3)
         print("Costo sol Inicial: "+str(self.__S.getCostoAsociado())+"      ==> Optimo: "+str(self.__optimo)+"  Desvio: "+str(round(porcentaje*100,3))+"%")
         print("Aristas Opt: "+str(Aristas_Opt))
+        print("IndAristas: "+str(ind_permitidos))
+        A_G = self._G.getA()
+        for i in ind_permitidos:
+            print(str(A_G[i])+"       id: "+str(i))
+
+        # print("R: "+str(rutas_refer))
+
 
         while(tiempoEjecuc < tiempoMax and porcentaje*100 > self.__porcentajeParada):
             if cond_Optimiz:
                 ind_permitidos = self.getPermitidos(Aristas_Opt, umbral, solucion_refer)    #Lista de elementos que no son tabu
                 self.__umbralMin = 0
-            
-            if auxCond and iteracEstancamiento > iteracEstancMax and ind_permitidos != []:
-                # print("\nind_permitidos: "+str(ind_permitidos))
-                # print("\nAristasOpt: "+str(Aristas_Opt))
-                # print("\nSol Refer: "+str(solucion_refer.getA()))
-                # print("\nRutas refer: ")
-                # for r in rutas_refer:
-                #     print("r: "+str(r.getA()))
-                print()
-                auxCond = False
+                # A_G = self._G.getA()
+                # for i in ind_permitidos:
+                #     print(str(A_G[i])+"       id: "+str(i))
 
             cond_Optimiz = False
             ADD = []
@@ -218,23 +230,42 @@ class CVRP:
             ind_random = np.arange(0,len(ind_permitidos))
             random.shuffle(ind_random)
             
-            indRutas = indAristas = []
-            #print("ind_permitidos antes  : "+str(ind_permitidos))
+            indRutas = []
+            indAristas = []
+    
+            # print("\nR: "+str(rutas_refer))
             nuevo_costo, k_Opt, indRutas, indAristas, aristasADD, aristasDROP, ind_permitidos = nueva_solucion.evaluarOpt(self._G.getA(), ind_permitidos, ind_random, rutas_refer, cond_Estancamiento)
-            #print("ind_permitidos despues: "+str(ind_permitidos))
-            nuevo_costo = round(nuevo_costo, 3)
+            print("%d-Opt Opcion: %d"%(k_Opt[0], k_Opt[1]))
+            print("ADD: "+str(aristasADD))
+            print("DROP: "+str(aristasDROP))
+            print("Costo antes: ", solucion_refer.getCostoAsociado())
+            print("Costo nuevo: ", nuevo_costo)
 
             tenureADD = self.__tenureADD
             tenureDROP = self.__tenureDROP
             costoSolucion = self.__S.getCostoAsociado()
-            
+            nuevo_costo = round(nuevo_costo, 5)
+
             #Si encontramos una mejor solucion que la tomada como referencia
             if(nuevo_costo < solucion_refer.getCostoAsociado() and aristasADD != []):
                 cad = "\n+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+- Iteracion %d  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-\n" %(iterac)
 
+                print("\nRutas refer: ")
+                for r in rutas_refer:
+                    print(str(r.getA())+"       costo: "+str(r.getCostoAsociado()))
+
                 nuevas_rutas = nueva_solucion.swap(k_Opt, aristasADD[0], rutas_refer, indRutas, indAristas)
                 nueva_solucion, strText = self.cargaSolucion(nuevas_rutas)
-    
+
+                print("\nRutas: ")
+                for r in nuevas_rutas:
+                    print(str(r.getA())+"       costo: "+str(r.getCostoAsociado()))
+
+                if nuevo_costo != round(nueva_solucion.getCostoAsociado(),5):
+                    print("nuevo_costo: ", nueva_solucion.getCostoAsociado())
+                    print("ERROR")
+            
+
                 rutas_refer = nuevas_rutas
                 solucion_refer = nueva_solucion
 
@@ -499,40 +530,44 @@ class CVRP:
         ind_permitidos = np.array([], dtype = int)
         claves = [hash(a) for a in solucion.getA()]
         dictA = dict(zip(claves, solucion.getA()))
-        
+        idListAristas = solucion.getIdListAristas()
         #No tengo en consideracion a las aristas que exceden el umbral y las que pertencen a S
+
+        #print("Aristas en Solución \n",str(solucion.getA()))
         for EP in Aristas:
             pertS = False
             h = hash(EP)
-            #hInverso = hash(EP.getAristaInvertida())
+            hInverso = hash(solucion.invertirArista(EP))
             try:
                 arista = dictA[h]
             except KeyError:
                 arista = None
 
-            # try:
-            #     aristaInv = dictA[hInverso]
-            # except KeyError:
-            #     aristaInv = None 
+            try:
+                aristaInv = dictA[hInverso]
+            except KeyError:
+                aristaInv = None 
 
             if arista is not None:
                 pertS = True
                 del dictA[h]
 
-            # if aristaInv is not None:
-            #     pertS = True
-            #     del dictA[hInverso]
+            if aristaInv is not None:
+                pertS = True
+                del dictA[hInverso]
 
-            if(not pertS and self.__umbralMin <= EP.getPeso() and EP.getPeso() <= umbral):
+            # if(not pertS and self.__umbralMin <= EP.getPeso() and EP.getPeso() <= umbral and EP.getId() not in idListAristas):
+            # if not pertS and self.__umbralMin <= EP.getPeso() and EP.getPeso() <= umbral:
                 AristasNuevas.append(EP)
                 ind_permitidos = np.append(ind_permitidos, EP.getId())
-
+        
                 for a in solucion.getA():
                     if a == EP:
                         print("Error")
+                        print(EP)
                         print("Id_EP: ", EP.getId())
         
-        ind_permitidos = np.unique(ind_permitidos)
+        # ind_permitidos = np.unique(ind_permitidos)
         
         #print("Aristas Nuevas:\n ",str(AristasNuevas))
         return ind_permitidos

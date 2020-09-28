@@ -8,17 +8,6 @@ import math
 import numpy as np
 from time import time
 
-from Grafo import Grafo 
-from Vertice import Vertice 
-from Arista import Arista
-import copy
-import sys
-import random
-import math
-import numpy as np
-from time import time
-
-
 class Solucion(Grafo):
     def __init__(self, M, Demanda, capacidad,G=None,vacio=False):
         super(Solucion, self).__init__(M, Demanda,G,vacio=vacio)
@@ -303,22 +292,15 @@ class Solucion(Grafo):
         _lambda = lambdaIni
         mu = muIni
         ni = niIni
-        # _lambda = 1
-        # mu = 0
-        # ni = 0
         t = time()
-        #sol_factible = False
         iteracion = nroIteracAntes
-        #while(not sol_factible):
         ahorros = self.obtenerAhorrosOncan(_lambda,mu,ni)
-        # ahorros = self.obtenerAhorros()
         dem = self._demanda
         recargaAhorro = True
         rutas = [[1,i] for i in range(2,self.getGrado()+1)]
         print("inició clarke wright")
 
         while(len(ahorros)>0 and len(rutas)!=nroVehiculos):
-            t2 = time()
             mejorAhorro = ahorros.pop(0)
             capacidadMax = self.__capacidadMax
             i = self.buscar(mejorAhorro[0],rutas) # i = (r1,c1) índice de la ruta en la que se encuentra 
@@ -356,17 +338,17 @@ class Solucion(Grafo):
                 _lambda = 0.1 
                 mu = 2
                 ni = 2 
-            #     rutas = []
-            # elif(iteracion < 2):
-            #     _lambda += 0.5
-            #     mu -= 0.1
-            #     ni -= 0.1
-            #     rutas = []
-            # else:
-            #     _lambda += 0.1
-            #     mu -= 0.1
-            #     ni -= 0.1
-            # iteracion +=1
+                rutas = []
+            elif(iteracion < 2):
+                _lambda += 0.5
+                mu -= 0.1
+                ni -= 0.1
+                rutas = []
+            else:
+                _lambda += 0.1
+                mu -= 0.1
+                ni -= 0.1
+            iteracion +=1
 
         print("tiempo clarke wright ", time()-t)
         return rutas, _lambda, mu, ni, iteracion
@@ -393,14 +375,18 @@ class Solucion(Grafo):
         ind_verticeDestino = -1
         ind_rutaOrigen = -1
         ind_rutaDestino = -1
-        
-        #arista_azar = (3,7)    => V_origen = 3 y V_destino = 7
-        #r: 1-2-3-4-5                r2: 1-6-7-8-9-10   
-        #  (1,2)(2,3)(3,4)(4,5)(5,1)   (1,6)(6,7)(7,8)(8,9)(9,10)(10,1)
-        #ind_VertOrigen = 2     ind_VertDest = 1
+        invertir = False
+
+        """
+        arista_azar = (3,7)    => V_origen = 3 y V_destino = 7
+        r: 1 - 2 - 3 - 4 - 5        r2: 1 - 6 - 7 - 8 - 9 - 10
+          (1,2)(2,3)(3,4)(4,5)(5,1)   (1,6)(6,7)(7,8)(8,9)(9,10)(10,1)
+        ind_VertOrigen = 2     ind_VertDest = 1
+        """
         for i in range(0,len(rutas)):
-            for j in range(0, len(rutas[i].getV())):
-                v = rutas[i].getV()[j]
+            rV = rutas[i].getV()
+            for j in range(0, len(rV)):
+                v = rV[j]
                 if (V_origen == v):
                     ind_verticeOrigen = j
                     ind_rutaOrigen = i
@@ -409,16 +395,16 @@ class Solucion(Grafo):
                     ind_rutaDestino = i
                 if (ind_verticeOrigen != -1 and ind_verticeDestino != -1):
                     break
+            
             if (ind_rutaOrigen != -1 and ind_rutaDestino != -1):
                 if (ind_rutaOrigen == ind_rutaDestino and ind_verticeOrigen > ind_verticeDestino):
                     ind = ind_verticeOrigen
                     ind_verticeOrigen = ind_verticeDestino + 1
                     ind_verticeDestino = ind - 1
+                    invertir = True
                 break
-        if(len(rutas)==0):
-            print("Error en getPosiciones\n"+str(rutas))
 
-        return [ind_rutaOrigen, ind_rutaDestino],[ind_verticeOrigen, ind_verticeDestino]
+        return [ind_rutaOrigen, ind_rutaDestino],[ind_verticeOrigen, ind_verticeDestino], invertir
 
     def __deepcopy__(self,memo):
         aux = copy.copy(self)
@@ -445,14 +431,16 @@ class Solucion(Grafo):
             V_origen = aristaIni.getOrigen()
             V_destino = aristaIni.getDestino()
             ADD = []
-            ADD.append(aristaIniOrig)
             indADD = []
-            indADD.append(aristaIni.getId())
             
-            indRutas, indAristas = self.getPosiciones(V_origen, V_destino, rutas)
+            indRutas, indAristas, invR = self.getPosiciones(V_origen, V_destino, rutas)
+            
             indR = [indRutas[0], indRutas[1]]
             indA = [indAristas[0], indAristas[1]]
-            nuevoCosto, tipo_2opt, DROP_2opt, indDROP_2opt = self.evaluar_2opt(aristaIni, indR, indA, rutas)
+            print("InvR: ", invR)
+            print("aristaIni: "+str(aristaIni))
+            nuevoCosto, tipo_2opt, DROP_2opt, indDROP_2opt = self.evaluar_2opt(aristaIni, indR, indA, rutas, invR)
+            aristaIni = copy.deepcopy(aristaIniOrig)
             if(nuevoCosto < costoSolucion):
                 costoSolucion = nuevoCosto
                 kOpt = 2
@@ -462,17 +450,21 @@ class Solucion(Grafo):
             
             indR = [indRutas[0], indRutas[1]]
             indA = [indAristas[0], indAristas[1]]
-            nuevoCosto, tipo_3opt, DROP_3opt, indDROP_3opt = self.evaluar_3opt(aristaIni, indR, indA, rutas)
+            print("aristaIni: "+str(aristaIni))
+            nuevoCosto, tipo_3opt, DROP_3opt, indDROP_3opt = self.evaluar_3opt(aristaIni, indR, indA, rutas, invR)
+            aristaIni = copy.deepcopy(aristaIniOrig)
             if(nuevoCosto < costoSolucion or (condEstancamiento and nuevoCosto!=float("inf")) ):
                 costoSolucion = nuevoCosto
                 kOpt = 3
                 tipo_kOpt = tipo_3opt
                 DROP = DROP_3opt
                 indDROP = indDROP_3opt 
-                
+            
             indR = [indRutas[0], indRutas[1]]
             indA = [indAristas[0], indAristas[1]]
-            nuevoCosto, tipo_4opt, DROP_4opt, indDROP_4opt = self.evaluar_4opt(aristaIni, indR, indA, rutas)
+            print("aristaIni: "+str(aristaIni))
+            nuevoCosto, tipo_4opt, DROP_4opt, indDROP_4opt = self.evaluar_4opt(aristaIni, indR, indA, rutas, invR)
+            aristaIni = copy.deepcopy(aristaIniOrig)
             if(nuevoCosto < costoSolucion or (condEstancamiento and nuevoCosto!=float("inf")) ):
                 costoSolucion = nuevoCosto
                 kOpt = 4
@@ -482,7 +474,9 @@ class Solucion(Grafo):
             
             indR = [indRutas[0], indRutas[1]]
             indA = [indAristas[0], indAristas[1]]
+            print("aristaIni: "+str(aristaIni))
             nuevoCosto, tipo_exch, DROP_exch, indDROP_exch  = self.evaluar_Exchange(aristaIni, indR, indA, rutas)
+            aristaIni = copy.deepcopy(aristaIniOrig)
             if(nuevoCosto < costoSolucion or (condEstancamiento and nuevoCosto!=float("inf")) ):
                 costoSolucion = nuevoCosto
                 kOpt = 5
@@ -491,6 +485,10 @@ class Solucion(Grafo):
                 indDROP = indDROP_exch
                 #ADD = ADD_exch
                 #indADD = indADD_exch
+
+            print("aristaIni: "+str(aristaIni))
+            ADD.append(aristaIniOrig)
+            indADD.append(aristaIni.getId())
 
         if(costoSolucion != float("inf")):
             index = [i for i in range(0,len(ind_permitidos)) if ind_permitidos[i] in indDROP or ind_permitidos[i] in indADD]
@@ -503,17 +501,14 @@ class Solucion(Grafo):
     
     """
     2-opt:
-    new_cost = costoSolucion + costo(a,b) + costo(8,4) - costo(a,4) - costo(8,b)
     r1: 1-2-3-a-4-5         r2: 1-6-7-b-8-9-10   -> ruta original
-    resultado:
     r1: 1-2-3-a-b-8-9-10    r2: 1-6-7-4-5        -> 1ra opcion
     r1: 1-2-3-8-9-10        r2: 1-6-7-b-a-4-5    -> 2da opcion
     r: 1,2,a,3,4,b,5,6     -> ruta original 
-    resultado:
     r: 1,2,a,b,4,3,5,6     -> 1ra opcion
     r: 1,2,4,3,a,b,5,6     -> 2da opcion
     """
-    def evaluar_2opt(self, aristaIni, ind_rutas, ind_A, rutas):
+    def evaluar_2opt(self, aristaIni, ind_rutas, ind_A, rutas, invR):
         opcion = 0
         costo_solucion = float("inf")
         costo_r_add1 = aristaIni.getPeso()
@@ -532,7 +527,10 @@ class Solucion(Grafo):
                     continue
 
                 if(i==2):
-                    #print("2da opcion")            
+                    #print("2da opcion")
+                    aristaIni = self.invertirArista(aristaIni)
+                    costo_r_add1 = aristaIni.getPeso()
+
                     r1 = rutas[ind_rutas[1]]
                     r2 = rutas[ind_rutas[0]]
                     a = copy.copy(A_r1)
@@ -594,7 +592,7 @@ class Solucion(Grafo):
 
                     #Caso no factible por ej:
                     #r1: 1-2-3-4-5-a    r2: 1-b-6-7-8-9-10  -> Sol: r1: 1-2-3-4-5-a-b-6-7-8-9-10    r2: 1
-                    if(A_r1_right==[] and A_r2_left==[] and opcion == 1):
+                    if A_r1_right==[] and A_r2_left==[] and opcion == 1:
                         continue
                     
                     r1DemandaAcumulada = r1.getDemandaAcumulada()
@@ -633,6 +631,12 @@ class Solucion(Grafo):
                 costo_r1_drop = A_r1_drop.getPeso()
                 costo_r2_drop = A_r2_drop.getPeso()
 
+                print("Costo anterior: ", self.getCostoAsociado())
+                print("costo_r_add1: "+str(costo_r_add1))
+                print("costo_r2_add: "+str(costo_r2_add))
+                print("costo_r_drop1: "+str(costo_r1_drop))
+                print("costo_r_drop2: "+str(costo_r2_drop))
+
                 nuevo_costo = self.getCostoAsociado() + costo_r_add1 + costo_r2_add - costo_r1_drop - costo_r2_drop
                 
                 if(nuevo_costo < costo_solucion):
@@ -650,54 +654,87 @@ class Solucion(Grafo):
                     # index_ADD.append(A_r2_add.getId())
         else:
             #En la misma ruta hay factibilidad, por lo tanto se calcula unicamente el costo
+            if invR:
+                aristaIni = self.invertirArista(aristaIni)
+                costo_r_add1 = aristaIni.getPeso()
+
+            # print("\nDistintas rutas")
+            # print("Arista Ini: "+str(aristaIni))
             r = rutas[ind_rutas[0]]
             V_r = r.getV()
             V_r.append(Vertice(1,0))
             A_r = r.getA()
-            #r: 1,2,a,3,4,b,5,6,1     -> Ruta original
-            #Sol:
-            #r: 1,2,a,b,4,3,5,6,1     -> 1ra opcion
-            #r: 1,2,4,3,a,b,5,6,1     -> 2da opcion
-            #r: 1,6,5,b,a,3,4,2,1     -> 2da opcion
+
+            """
+            r: 1,2,a,3,4,b,5,6,1     -> Ruta original
+            r: 1,2,a,b,4,3,5,6,1     -> 1ra opcion
+            r: 1,2,4,3,a,b,5,6,1     -> 2da opcion
+            """
+            # print("costo anterior: ", self.getCostoAsociado())
             for i in range(1,3):
-                if(i==2):
+                costo_Vmiddle_add = 0
+                costo_Vmiddle_drop = 0
+                
+                if i == 1:
+                    """
+                    r: 1,2,b,3,4,a,5,6,1     -> Ruta original
+                    r: 1,2,b,a,4,3,5,6,1     -> 1ra opcion
+                    r: 1,2,a,3,4,b,5,6,1     -> Ruta original
+                    r: 1,2,a,b,4,3,5,6,1     -> 1ra opcion
+                    """
+                    A_r_drop1 = A_r[ind_A[0]]           # (a,3)
+                    costo_r_drop1 = A_r_drop1.getPeso()
+                    A_r_drop2 = A_r[ind_A[1]+1]         # (b,5)
+                    costo_r_drop2 = A_r_drop2.getPeso()
+                    
+                    V_origen = V_r[ind_A[0]+1] # 3
+                    V_destino = V_r[ind_A[1]+2] # 5
+                    costo_r_add2 = self._matrizDistancias[V_origen.getValue()-1][V_destino.getValue()-1] # (3,5)
+
+                    V_r_middle = V_r[ind_A[0]+1:ind_A[1]+2] # 3,4
+                    if V_r_middle != []:
+                        costo_Vmiddle_drop = self.getCostoSecVert(V_r_middle)
+                        V_r_middle = V_r_middle[::-1]   # 4,3
+                        costo_Vmiddle_add = self.getCostoSecVert(V_r_middle)
+
+                else:
+                    """
+                    r: 1,2,a,3,4,b,5,6,1     -> Ruta original
+                    r: 1,2,4,3,a,b,5,6,1     -> 2da opcion
+                    r: 1,2,b,3,4,a,5,6,1     -> Ruta original
+                    r: 1,2,4,3,b,a,5,6,1     -> 2da opcion
+                    """
                     if(0 in ind_A):
-                        # a = 1
                         #r: a,2,3,4,5,b,6,1     -> Ruta original
-                        #r: a,b,5,4,3,2,6,1     -> 1ra opcion        
-                        #r: 1,6,b,5,4,3,2,a     -> Ruta original invertida
+                        #r: a,b,5,4,3,2,6,1
                         #r: 1,6,b,a,2,3,4,5     -> 2da opcion. No se puede xq a = 1        
                         # a o b no pueden ser igual a 1 para la segunda opcion
                         continue
                     
-                    A_r_drop1 = A_r[ind_A[0]-1]
+                    A_r_drop1 = A_r[ind_A[0]-1]         # (2,a)
                     costo_r_drop1 = A_r_drop1.getPeso()
-                    A_r_drop2 = A_r[ind_A[1]]
+                    A_r_drop2 = A_r[ind_A[1]]           # (4,b)
                     costo_r_drop2 = A_r_drop2.getPeso()
                     
                     V_origen = A_r_drop1.getOrigen()
                     V_destino = A_r_drop2.getOrigen()
-                    costo_r_add2 = self._matrizDistancias[V_origen.getValue()-1][V_destino.getValue()-1]
+                    costo_r_add2 = self._matrizDistancias[V_origen.getValue()-1][V_destino.getValue()-1] # (2,4)
 
-                else:
-                    A_r_drop1 = A_r[ind_A[0]]
-                    costo_r_drop1 = A_r_drop1.getPeso()
-                    A_r_drop2 = A_r[ind_A[1]+1]
-                    costo_r_drop2 = A_r_drop2.getPeso()
-                    try:
-                        V_origen = V_r[ind_A[0]+1]
-                    except:
-                        print("Arista ini: "+str(aristaIni))
-                        for i in range(0, len(rutas)):
-                            x = rutas[i]
-                            print("ruta #%d: %s" %(i, str(x.getV())))
-                        print("ind_A: "+str(ind_A))
-                        a = 1/0
-                    V_destino = V_r[ind_A[1]+2]
-                    costo_r_add2 = self._matrizDistancias[V_origen.getValue()-1][V_destino.getValue()-1]
-                    
-                nuevo_costo = self.getCostoAsociado() + costo_r_add1 + costo_r_add2 - costo_r_drop1 - costo_r_drop2
-                
+                    V_r_middle = V_r[ind_A[0]:ind_A[1]+1] # 3,4
+                    if V_r_middle != []:
+                        costo_Vmiddle_drop = self.getCostoSecVert(V_r_middle)
+                        V_r_middle = V_r_middle[::-1]   # 4,3
+                        costo_Vmiddle_add = self.getCostoSecVert(V_r_middle)
+
+                print("costo ADD1: ", costo_r_add1)
+                print("costo ADD2: ", costo_r_add2)
+                print("DROP: "+str(A_r_drop1)+ "  "+str(A_r_drop2))
+                print("costo Vmiddle add: ", costo_Vmiddle_add)
+                print("costo Vmiddle drop: ", costo_Vmiddle_drop)
+
+                nuevo_costo = self.getCostoAsociado() + costo_r_add1 + costo_r_add2 + costo_Vmiddle_add - costo_r_drop1 - costo_r_drop2 - costo_Vmiddle_drop
+                # print("nuevo_costo:",nuevo_costo)
+
                 if(nuevo_costo < costo_solucion):
                     costo_solucion = nuevo_costo
                     opcion = i*(-1)
@@ -710,9 +747,10 @@ class Solucion(Grafo):
             
             V_r = V_r[:-1]
             r.setV(V_r)
-            
-        return costo_solucion, opcion, DROP, index_DROP
+            # print("\nr: "+str(r.getV())+"\n")
 
+        return costo_solucion, opcion, DROP, index_DROP
+    
     def swap_2opt(self, arista_ini, ind_rutas, ind_A, rutas, opcion):    
         costoSolucion = self.getCostoAsociado()
         ADD = []
@@ -725,6 +763,7 @@ class Solucion(Grafo):
             r2 = rutas[ind_rutas[1]]
             A_r1 = r1.getA()
             A_r2 = r2.getA()
+
             if(opcion==1):
                 A_r1_left = A_r1[:ind_A[0]]
                 A_r1_right = A_r1[ind_A[0]+1:]
@@ -755,7 +794,7 @@ class Solucion(Grafo):
                 ADD.append(arista_ini)                
 
                 if(A_r1_left!=[] and A_r1_left[-1].getDestino()!=arista_ini.getOrigen()):
-                    arista_ini.invertir()
+                    arista_ini = self.invertirArista(arista_ini)
                 
                 A_r1_left.append(arista_ini)
                 A_r1_left.extend(A_r2_right)
@@ -772,7 +811,7 @@ class Solucion(Grafo):
                 A_r2_drop = A_r2[ind_A[1]+1]
 
                 if(arista_ini.getDestino() == A_r1_drop.getDestino()):
-                    arista_ini.invertir()
+                    arista_ini = self.invertirArista(arista_ini)
                 
                 if(A_r1_left!=[]):
                     V_origen = A_r1_left[-1].getDestino()
@@ -790,7 +829,7 @@ class Solucion(Grafo):
                 A_r_add.setId(V_origen.getValue()-1, V_destino.getValue()-1, len(self._matrizDistancias))
 
                 if(A_r_add.getDestino() != arista_ini.getOrigen()):
-                    arista_ini.invertir()
+                    arista_ini = self.invertirArista(arista_ini)
                 
                 A_r1_left.append(A_r_add)
                 #print("A_r1_left: "+str(A_r1_left))
@@ -815,6 +854,7 @@ class Solucion(Grafo):
             r2.setCapacidad(cap_r2)
 
             costoSolucion += r1.getCostoAsociado() + r2.getCostoAsociado()
+        
         #En la misma ruta
         else:
             r = rutas[ind_rutas[0]]
@@ -822,44 +862,72 @@ class Solucion(Grafo):
             V_r = r.getV()
             V_r.append(Vertice(1,0))
             
-            if(opcion == -2):
-                V_r = V_r[::-1]
-                lenV = len(V_r) - 2
-                ind_b = lenV - ind_A[1]
-                ind_a = lenV - ind_A[0]
-                ind_A = [ind_b, ind_a]
-                ADD = []
-                arista_ini.invertir()
-                ADD.append(arista_ini)
+            if opcion == -1:
+                """
+                r: 1,2,a,3,4,b,5,6     -> ruta original 
+                r: 1,2,a,b,4,3,5,6     -> 1ra opcion
+                """
+                V_r_left = V_r[:ind_A[0]+1]     # 1,2,a
+                V_r_middle = V_r[ind_A[0]+1:ind_A[1]+1] # 3,4
+                V_r_middle = V_r_middle[::-1]   # 4,3
+                V_r_right = V_r[ind_A[1]+2:]    # 5,6
             
-            V_r_left = V_r[:ind_A[0]+1]
-            V_r_middle = V_r[ind_A[0]+1:ind_A[1]+1]
-            V_r_middle = V_r_middle[::-1]
-            V_r_right = V_r[ind_A[1]+2:]
-        
-            try:
                 A_r_drop1 = r.getA()[ind_A[0]]
                 A_r_drop2 = r.getA()[ind_A[1]+1]
-            except IndexError:
-                print("r: "+str(r.getA()))
-                print("aristaIni: "+str(arista_ini))
-                print("ind_A: "+str(ind_A))
-                a = 1/0
-            V_origen = V_r_middle[-1]
-            V_destino = V_r_right[0]
-            peso = self._matrizDistancias[V_origen.getValue()-1][V_destino.getValue()-1]
-            A_r_add = Arista(V_origen,V_destino, peso)
-            A_r_add.setId(V_origen.getValue()-1, V_destino.getValue()-1, len(self._matrizDistancias))
 
-            ADD.append(A_r_add)              
-            DROP.append(A_r_drop1)
-            DROP.append(A_r_drop2)
+                V_origen = V_r[ind_A[0]+1]
+                V_destino = V_r_right[0]
+                peso = self._matrizDistancias[V_origen.getValue()-1][V_destino.getValue()-1]
+                A_r_add = Arista(V_origen,V_destino, peso)
+                A_r_add.setId(V_origen.getValue()-1, V_destino.getValue()-1, len(self._matrizDistancias))
+
+                ADD.append(A_r_add)              
+                DROP.append(A_r_drop1)
+                DROP.append(A_r_drop2)
+                
+                print("V_r_l: "+str(V_r_left))
+                #V_r_left.append(ADD[0].getOrigen()) # 1,2,a
+                #print("V_r_l: "+str(V_r_left))
+                V_r_left.append(V_r[ind_A[1]+1]) # 1,2,a,b
+                print("V_r_l: "+str(V_r_left))
+                V_r_left.extend(V_r_middle)      # 1,2,a,b,4,3
+                print("V_r_l: "+str(V_r_left))
+                V_r_left.extend(V_r_right)       # 1,2,a,b,4,3,5,6
+                print("V_r_l: "+str(V_r_left))
+                #V_r = V_r_left[:-1]
+            else:
+                """
+                r: 1,2,a,3,4,b,5,6     -> ruta original 
+                r: 1,2,4,3,a,b,5,6     -> 2da opcion
+                """
+                V_r_left = V_r[:ind_A[0]]     # 1,2
+                V_r_middle = V_r[ind_A[0]+1:ind_A[1]+1] # 3,4
+                V_r_middle = V_r_middle[::-1]   # 4,3
+                V_r_right = V_r[ind_A[1]+1:]    # b,5,6
             
-            V_r_left.append(V_r[ind_A[1]+1])
-            V_r_left.extend(V_r_middle)
-            V_r_left.extend(V_r_right)
+                A_r_drop1 = r.getA()[ind_A[0]]
+                A_r_drop2 = r.getA()[ind_A[1]+1]
+
+                V_origen = V_r_left[-1]     # 2
+                V_destino = V_r_middle[0]   # 4
+                peso = self._matrizDistancias[V_origen.getValue()-1][V_destino.getValue()-1]
+                A_r_add = Arista(V_origen,V_destino, peso)
+                A_r_add.setId(V_origen.getValue()-1, V_destino.getValue()-1, len(self._matrizDistancias))
+
+                ADD.append(A_r_add)
+                DROP.append(A_r_drop1)
+                DROP.append(A_r_drop2)
+                
+                print("V_r_l: "+str(V_r_left))
+                V_r_left.extend(V_r_middle)     # 1,2,4,3
+                print("V_r_l: "+str(V_r_left))
+                V_r_left.append(V_r[ind_A[0]])  # 1,2,4,3,a
+                print("V_r_l: "+str(V_r_left))
+                V_r_left.extend(V_r_right)      # 1,2,4,3,a,b,5,6
+                print("V_r_l: "+str(V_r_left))
+            
             V_r = V_r_left[:-1]
-            
+            #print("V_r: "+str(V_r))
             cap = r.cargarDesdeSecuenciaDeVertices(V_r)
             r.setCapacidad(cap)
             costoSolucion += r.getCostoAsociado()
@@ -870,17 +938,17 @@ class Solucion(Grafo):
     3-opt: (a,b)
     r1: 1,2,3,a,4,5,6          r2: 1,7,8,b,9,10,11,12
     resultado:
-    r1: 1,2,3,a,b,4,5,6          r2: 1,7,8,9,10,11,12       -> 1ra opcion
-    r1: 1,2,3,b,a,4,5,6          r2: 1,7,8,9,10,11,12       -> 2da opcion
-    r1: 1,2,3,4,5,6              r2: 1,7,8,a,b,9,10,11,12   -> 3ra opcion
-    r1: 1,2,3,4,5,6              r2: 1,7,8,b,a,9,10,11,12   -> 4ta opcion
+    r1: 1,2,3,b,a,4,5,6          r2: 1,7,8,9,10,11,12       -> 1ra opcion   x
+    r1: 1,2,3,a,b,4,5,6          r2: 1,7,8,9,10,11,12       -> 2da opcion
+    r1: 1,2,3,4,5,6              r2: 1,7,8,a,b,9,10,11,12   -> 3ra opcion   
+    r1: 1,2,3,4,5,6              r2: 1,7,8,b,a,9,10,11,12   -> 4ta opcion   x
     r: 1,2,a,3,4,5,b,6,7,8      -> ruta original 
     r: 1,2,a,b,3,4,5,6,7,8      -> 1ra opcion
-    r: 1,2,b,a,3,4,5,6,7,8      -> 2da opcion
-    r: 1,2,3,4,5,b,a,6,7,8      -> 3ra opcion
-    r: 1,2,3,4,5,a,b,6,7,8      -> 4ta opcion
+    r: 1,2,b,a,3,4,5,6,7,8      -> 2da opcion   x
+    r: 1,2,3,4,5,b,a,6,7,8      -> 3ra opcion   x
+    r: 1,2,3,4,5,a,b,6,7,8      -> 4ta opcion       -> Error
     """
-    def evaluar_3opt(self, aristaIni, ind_rutas, ind_A, rutas):
+    def evaluar_3opt(self, aristaIni, ind_rutas, ind_A, rutas, invR):
         sol_factible_12 = sol_factible_34 = False
         #Opcion: 0 (1ra opcion) | 1 (2da opcion) | 3 (3ra opcion) | 4 (4ta opcion)
         #Misma ruta: -1(1ra opcion) | -2 (2da opcion) | -3 (3ra opcion) | -4 (4ta opcion)
@@ -913,62 +981,76 @@ class Solucion(Grafo):
             # r1: 1,2,3,4,5,6              r2: 1,7,8,a,b,9,10,11,12   -> 3ra opcion
             # r1: 1,2,3,4,5,6              r2: 1,7,8,b,a,9,10,11,12   -> 4ta opcion    
             if(sol_factible_34):
-                #print("\nsol factible por 3-opt 3ra y 4ta opcion")
-                #A_r1_left = r1.getA()[:ind_A[0]-1]
-                A_r1_right = r1.getA()[ind_A[0]+1:]
-                #print("A_r1_left: "+str(A_r1_left))
-                #print("A_r1_r: "+str(A_r1_right))
-                
-                #A_r2_left = r2.getA()[:ind_A[1]]
+                #A_r1_right = r1.getA()[ind_A[0]+1:]
                 A_r2_right = r2.getA()[ind_A[1]+1:]
-                #print("A_r2_left: "+str(A_r2_left))
-                #print("A_r2_right: "+str(A_r2_right)+"\n")
                 for i in range(3,5):
+                    costo_r_add1 = aristaIni.getPeso()
+                    # print("A_ini: "+str(aristaIni)+"      costo: ",costo_r_add1)
+
                     if(i==4 and A_r2_right == []):
                         #print("4ta opcion no es posible")
                         continue
+
+                    if i == 4:
+                        # aristaIni = self.invertirArista(aristaIni)
+                        costo_r_add1 = self.getCostoAristaInv(aristaIni)
+                    
                     #Obtengo las aristas que se eliminan y las que se añaden
                     #DROP
                     A_r1_drop1 = r1.getA()[ind_A[0]-1]
                     costo_r1_drop1 = A_r1_drop1.getPeso()
-                    
+                    # print(costo_r1_drop1)
+
                     A_r1_drop2 = r1.getA()[ind_A[0]]
                     costo_r1_drop2 = A_r1_drop2.getPeso()
+                    # print(costo_r1_drop2)
                     
                     #ADD
                     V_origen = r1.getA()[ind_A[0]-1].getOrigen()
                     V_destino = r1.getA()[ind_A[0]].getDestino()
                     peso = self._matrizDistancias[V_origen.getValue()-1][V_destino.getValue()-1]
-                    #A_r1_add = Arista(V_origen, V_destino, peso)
-                    #print("A_r1_add: "+str(A_r1_add))
+                    A_r1_add = Arista(V_origen, V_destino, peso)
+                    # print("A_r1_add: "+str(A_r1_add)+"      costo: ",peso)
                     costo_r1_add = peso
 
                     if(i==3):
                         A_r2_drop = r2.getA()[ind_A[1]]
                         costo_r2_drop = A_r2_drop.getPeso()
+                        # print(costo_r2_drop)
                     
                         V_origen = r2.getA()[ind_A[1]].getOrigen()
                         V_destino = r1.getA()[ind_A[0]-1].getDestino()
                         peso = self._matrizDistancias[V_origen.getValue()-1][V_destino.getValue()-1]
-                        #A_r2_add = Arista(V_origen, V_destino, peso)
-                        #A_r2_add.setId(V_origen.getValue()-1, V_destino.getValue()-1, len(self._matrizDistancias))
-                        #print("A_r2_add: "+str(A_r2_add))
+                        
+                        A_r2_add = Arista(V_origen, V_destino, peso)
+                        # print("A_r2_add: "+str(A_r2_add)+"      costo: ",peso)
+                        
                         costo_r2_add = peso
                     else:
                         A_r2_drop = r2.getA()[ind_A[1]+1]
                         costo_r2_drop = A_r2_drop.getPeso()
+                        # print(costo_r2_drop)
                     
                         V_origen = r1.getA()[ind_A[0]-1].getDestino()
                         V_destino = r2.getA()[ind_A[1]+1].getDestino()
                         peso = self._matrizDistancias[V_origen.getValue()-1][V_destino.getValue()-1]
-                        #A_r2_add = Arista(V_origen, V_destino, peso)
-                        #print("A_r2_add: "+str(A_r2_add))
+                        
+                        A_r2_add = Arista(V_origen, V_destino, peso)
+                        # print("A_r2_add: "+str(A_r2_add)+"      costo: ",peso)
+                        
                         costo_r2_add = peso
 
+                    print("costoIni: ",costo_r_add1)
+                    print("r1_add: ", costo_r1_add)
+                    print("r2_add: ", costo_r2_add)
+                    print("r1_drop1: ", costo_r1_drop1)
+                    print("r1_drop2: ", costo_r1_drop2)
+                    print("r2_drop: ", costo_r2_drop)
                     nuevo_costo = self.getCostoAsociado() + costo_r_add1 + costo_r1_add + costo_r2_add - costo_r1_drop1 - costo_r1_drop2 - costo_r2_drop
-                    #print("Nuevo costo: ", nuevo_costo)
+                    print("Costo anterior: ",self.getCostoAsociado())
+                    # print("Nuevo costo: ", nuevo_costo)
                 
-                    if(nuevo_costo < costo_solucion):
+                    if nuevo_costo < costo_solucion:
                         costo_solucion = nuevo_costo
                         opcion = i
                         DROP = []
@@ -991,27 +1073,29 @@ class Solucion(Grafo):
                 if(len(A_r1)<3):
                     #print("Sol no factible. No se cuenta con suficiente aristas para realizar el swap")
                     return costo_solucion, opcion, DROP, index_DROP        
-                #print("Sol factible. 3-opt 1ra y 2da opcion")
                 A_r2 = r2.getA()
 
+                #Invierte los indices de las aristas
                 i = ind_A[0]
                 ind_A[0] = ind_A[1] + 1
                 ind_A[1] = i - 1
                 #A_r1_left = A_r1[:ind_A[0]-1]
                 A_r1_right = A_r1[ind_A[0]+1:]
-                #print("A_r1_left: "+str(A_r1_left))
-                #print("A_r1_r: "+str(A_r1_right))
                 
                 #A_r2_left = A_r2[:ind_A[1]]
-                A_r2_right = A_r2[ind_A[1]+1:]
-                #print("A_r2_left: "+str(A_r2_left))
-                #print("A_r2_right: "+str(A_r2_right)+"\n")
+                #A_r2_right = A_r2[ind_A[1]+1:]
                 
                 for i in range(1,3):
+                    costo_r_add1 = aristaIni.getPeso()
+                
                     if(i==2 and A_r1_right == []):
                         #print("2da opcion no es posible")
                         continue
                     
+                    if i == 1:
+                        costo_r_add1 = self.getCostoAristaInv(aristaIni)
+                        # print("costo_r_add1: ",costo_r_add1)
+
                     #Obtengo las aristas que se eliminan y las que se añaden
                     #DROP
                     A_r1_drop1 = r1.getA()[ind_A[0]-1]
@@ -1024,19 +1108,21 @@ class Solucion(Grafo):
                     V_origen = r1.getA()[ind_A[0]-1].getOrigen()
                     V_destino = r1.getA()[ind_A[0]].getDestino()
                     peso = self._matrizDistancias[V_origen.getValue()-1][V_destino.getValue()-1]
-                    #A_r1_add = Arista(V_origen, V_destino, peso)
-                    #print("A_r1_add: "+str(A_r1_add))
+                    A_r1_add = Arista(V_origen, V_destino, peso)
                     costo_r1_add = peso
+                    # print("A_r1_add: "+str(A_r1_add)+"      costo: ",peso)
 
                     if(i==1):
-                        A_r2_drop = A_r2[ind_A[1]]
+                        #r1: 1,2,3,a,4,5,6            r2: 1,7,8,b,9,10,11,12
+                        #r1: 1,2,3,b,a,4,5,6          r2: 1,7,8,9,10,11,12   -> 1ra opcion
+                        A_r2_drop = A_r2[ind_A[1]]  # (a, 4)
                         costo_r2_drop = A_r2_drop.getPeso()
-                    
-                        V_origen = A_r2[ind_A[1]].getOrigen()
-                        V_destino = r1.getA()[ind_A[0]-1].getDestino()
+                        
+                        V_origen = A_r2[ind_A[1]].getOrigen()   # (a, )
+                        V_destino = r1.getA()[ind_A[0]-1].getDestino() # (,)
                         peso = self._matrizDistancias[V_origen.getValue()-1][V_destino.getValue()-1]
-                        #A_r2_add = Arista(V_origen, V_destino, peso)
-                        #print("A_r2_add: "+str(A_r2_add))
+                        A_r2_add = Arista(V_origen, V_destino, peso)
+                        # print("A_r2_add: "+str(A_r2_add)+"      costo: ",peso)
                         #A_r2_add.setId(V_origen.getValue()-1, V_destino.getValue()-1, len(self._matrizDistancias))
                         costo_r2_add = peso
                     else:
@@ -1046,11 +1132,20 @@ class Solucion(Grafo):
                         V_origen = r1.getA()[ind_A[0]-1].getDestino()
                         V_destino = A_r2[ind_A[1]+1].getDestino()
                         peso = self._matrizDistancias[V_origen.getValue()-1][V_destino.getValue()-1]
-                        #A_r2_add = Arista(V_origen, V_destino, peso)
-                        #print("A_r2_add: "+str(A_r2_add))
+                        A_r2_add = Arista(V_origen, V_destino, peso)
+                        # print("A_r2_add: "+str(A_r2_add)+"      costo: ",peso)
                         costo_r2_add = peso
 
+                    print("\ncostoIni: ",costo_r_add1)
+                    print("r1_add: ", costo_r1_add)
+                    print("r2_add: ", costo_r2_add)
+                    print("r1_drop1: ", costo_r1_drop1)
+                    print("r1_drop2: ", costo_r1_drop2)
+                    print("r2_drop: ", costo_r2_drop)
                     nuevo_costo = self.getCostoAsociado() + costo_r_add1 + costo_r1_add + costo_r2_add - costo_r1_drop1 - costo_r1_drop2 - costo_r2_drop
+                    print("Costo anterior: ",self.getCostoAsociado())
+                    # print("Nuevo costo: ", nuevo_costo)
+                
                     #print("Nuevo costo: ", nuevo_costo)
                     if(nuevo_costo < costo_solucion):
                         costo_solucion = nuevo_costo
@@ -1068,12 +1163,15 @@ class Solucion(Grafo):
         #3-opt en la misma ruta
         else:
             # r: 1,2,a,3,4,5,b,6,7,8      -> ruta original 
-            # resultado:
             # r: 1,2,a,b,3,4,5,6,7,8      -> 1ra opcion
             # r: 1,2,b,a,3,4,5,6,7,8      -> 2da opcion
-            # r: 1,2,3,4,5,a,b,6,7,8      -> 3ra opcion
-            # r: 1,2,3,4,5,b,a,6,7,8      -> 4ta opcion
-            #print("\nPor la misma ruta")
+            # r: 1,2,3,4,5,b,a,6,7,8      -> 3ra opcion
+            # r: 1,2,3,4,5,a,b,6,7,8      -> 4ta opcion
+            if invR:
+                aristaIni = self.invertirArista(aristaIni)
+                costo_r_add1 = aristaIni.getPeso()
+            aristaIniOrig = copy.deepcopy(aristaIni)
+
             r = rutas[ind_rutas[0]]
             V_r = r.getV()
             V_r_middle = V_r[ind_A[0]+1:ind_A[1]+1]
@@ -1084,10 +1182,6 @@ class Solucion(Grafo):
             
             V_r_left = V_r[:ind_A[0]+1]
             V_r_right = V_r[ind_A[1]+2:]
-            # print("ind_A: "+str(ind_A))
-            # print("V_r_r: "+str(V_r_right))
-            # print("V_r_m: "+str(V_r_middle))
-            # print("V_r_l: "+str(V_r_left))
             
             for ind in range(2):
                 if(ind==1):
@@ -1101,6 +1195,7 @@ class Solucion(Grafo):
                     #print("\n1ra y 2da opcion")
                 
                 if(ind == 0):
+                    #1ra y 2da opcion
                     A_r_drop2 = r.getA()[ind_A[1]+1]
                     A_r_drop3 = r.getA()[ind_A[1]]
                     V_origen = V_r_middle[-1]
@@ -1118,8 +1213,12 @@ class Solucion(Grafo):
                 costo_r_drop2 = A_r_drop2.getPeso()
                 costo_r_drop3 = A_r_drop3.getPeso()
                 
+                # 1ra y 2da opcion
                 if(ind == 0):
                     for i in range(1,3):
+                        costo_r_add1 = aristaIniOrig.getPeso()
+
+                        # 1ra opcion
                         if(i==1):
                             A_r_drop1 = r.getA()[ind_A[0]]
                             costo_r_drop1 = A_r_drop1.getPeso()
@@ -1130,9 +1229,10 @@ class Solucion(Grafo):
                             A_r_add3 = Arista(V_origen,V_destino, peso)
                             A_r_add3.setId(V_origen.getValue()-1, V_destino.getValue()-1, len(self._matrizDistancias))
                             costo_r_add3 = peso
-                            #print("A_r_add2: "+str(A_r_add2))
-                            #print("A_r_add3: "+str(A_r_add3))
+                        # 2da opcion
                         elif(i==2 and 0 not in ind_A):
+                            costo_r_add1 = self.getCostoAristaInv(aristaIni)
+
                             A_r_drop1 = r.getA()[ind_A[0]-1]
                             costo_r_drop1 = A_r_drop1.getPeso()
                             
@@ -1141,11 +1241,17 @@ class Solucion(Grafo):
                             peso = self._matrizDistancias[V_origen.getValue()-1][V_destino.getValue()-1]
                             A_r_add3 = Arista(V_origen,V_destino, peso)
                             A_r_add3.setId(V_origen.getValue()-1, V_destino.getValue()-1, len(self._matrizDistancias))
-                            costo_r_add3 = peso                    
-                            #print("A_r_add2: "+str(A_r_add2))
-                            #print("A_r_add3: "+str(A_r_add3))
+                            costo_r_add3 = peso
                         nuevo_costo = self.getCostoAsociado() + costo_r_add1 + costo_r_add2 + costo_r_add3 - costo_r_drop1 - costo_r_drop2 - costo_r_drop3
-                        #print("Costo anterior: ", self.getCostoAsociado())
+
+                        print("Costo anterior: ", self.getCostoAsociado())
+                        print("costo_r_add1: "+str(costo_r_add1))
+                        print("costo_r_add2: "+str(costo_r_add2))
+                        print("costo_r_add3: "+str(costo_r_add3))
+                        print("costo_r_drop1: "+str(costo_r_drop1))
+                        print("costo_r_drop2: "+str(costo_r_drop2))
+                        print("costo_r_drop3: "+str(costo_r_drop3))
+                        
                         #print("Nuevo costo: ", nuevo_costo)
                         if(nuevo_costo < costo_solucion):
                             costo_solucion = nuevo_costo
@@ -1159,9 +1265,16 @@ class Solucion(Grafo):
                             index_DROP.append(A_r_drop2.getId())
                             index_DROP.append(A_r_drop3.getId())
                             #print("DROP: "+str(DROP))
+                
+                # 3ra y 4ta opcion
                 elif(ind == 1):
                     for i in range(1,3):
+                        costo_r_add1 = aristaIniOrig.getPeso()
+                    
+                        # 3ra opcion
                         if(i==1):
+                            costo_r_add1 = self.getCostoAristaInv(aristaIni)
+
                             A_r_drop1 = r.getA()[ind_A[1]]
                             costo_r_drop1 = A_r_drop1.getPeso()
                             
@@ -1171,10 +1284,10 @@ class Solucion(Grafo):
                             A_r_add3 = Arista(V_origen,V_destino, peso)
                             A_r_add3.setId(V_origen.getValue()-1, V_destino.getValue()-1, len(self._matrizDistancias))
                             costo_r_add3 = peso
-                            #print("A_r_add2: "+str(A_r_add2))
-                            #print("A_r_add3: "+str(A_r_add3))
+                        # 4ta opcion
                         else:
-                            A_r_drop1 = r.getA()[ind_A[1]-1]
+                            #1,2,a,3,4,5,b,6,7,8
+                            A_r_drop1 = r.getA()[ind_A[1]-1]    # 
                             costo_r_drop1 = A_r_drop1.getPeso()
                             
                             V_destino = V_r[ind_A[0]+1]
@@ -1182,12 +1295,12 @@ class Solucion(Grafo):
                             peso = self._matrizDistancias[V_origen.getValue()-1][V_destino.getValue()-1]
                             A_r_add3 = Arista(V_origen,V_destino, peso)
                             A_r_add3.setId(V_origen.getValue()-1, V_destino.getValue()-1, len(self._matrizDistancias))
-                            costo_r_add3 = peso                    
-                            #print("A_r_add2: "+str(A_r_add2))
-                            #print("A_r_add3: "+str(A_r_add3))
+                            costo_r_add3 = peso
+                                            
                         nuevo_costo = self.getCostoAsociado() + costo_r_add1 + costo_r_add2 + costo_r_add3 - costo_r_drop1 - costo_r_drop2 - costo_r_drop3
-                        #print("Costo anterior: ", self.getCostoAsociado())
-                        #print("Nuevo costo: ", nuevo_costo)
+                        
+                        # print("Costo anterior: ", self.getCostoAsociado())
+                        # print("Nuevo costo: ", nuevo_costo)
                         if(nuevo_costo < costo_solucion):
                             costo_solucion = nuevo_costo
                             opcion = (-1)*i - 2*ind
@@ -1212,8 +1325,8 @@ class Solucion(Grafo):
         if(opcion > 0):
             # r1: 1,2,3,a,4,5,6            r2: 1,7,8,b,9,10,11,12
             if(opcion == 3 or opcion == 4):
-                # r1: 1,2,3,4,5,6              r2: 1,7,8,b,a,9,10,11,12   -> 3ra opcion
-                # r1: 1,2,3,4,5,6              r2: 1,7,8,a,b,9,10,11,12   -> 4ta opcion
+                # r1: 1,2,3,4,5,6              r2: 1,7,8,a,b,9,10,11,12   -> 3ra opcion
+                # r1: 1,2,3,4,5,6              r2: 1,7,8,b,a,9,10,11,12   -> 4ta opcion
                 r1 = rutas[ind_rutas[0]]
                 r2 = rutas[ind_rutas[1]]
                 #print("\nsol factible por 3-opt 3ra y 4ta opcion")
@@ -1239,7 +1352,7 @@ class Solucion(Grafo):
             V_origen = r1.getA()[ind_A[0]-1].getOrigen()
             V_destino = r1.getA()[ind_A[0]].getDestino()
             peso = self._matrizDistancias[V_origen.getValue()-1][V_destino.getValue()-1]
-            A_r1_add = Arista(V_origen, V_destino, peso)
+            A_r1_add = Arista(V_origen, V_destino, peso, len(self._matrizDistancias))
             #print("A_r1_add: "+str(A_r1_add))
             #costo_r1_add = peso
 
@@ -1257,8 +1370,9 @@ class Solucion(Grafo):
                 #print("A_r2_add: "+str(A_r2_add))
                 #costo_r2_add = peso
                 A_r2_left.append(A_r2_add)
-                if(opcion==1):
-                    arista_ini.invertir()
+                if opcion==1 :
+                    arista_ini = self.invertirArista(arista_ini)
+                    # costo_r_add1 = aristaIni.getPeso()
                 A_r2_left.append(arista_ini)
             else:
                 #print("Opcion 2 o 4")
@@ -1274,7 +1388,8 @@ class Solucion(Grafo):
                 #print("A_r2_add: "+str(A_r2_add))
                 #costo_r2_add = peso
                 if(opcion==4):
-                    arista_ini.invertir()
+                    arista_ini = self.invertirArista(arista_ini)
+
                 A_r2_left.append(arista_ini)
                 A_r2_left.append(A_r2_add)
             A_r2_left.extend(A_r2_right)
@@ -1282,21 +1397,14 @@ class Solucion(Grafo):
             
             A_r1_left.append(A_r1_add)
             A_r1_left.extend(A_r1_right)
-            #print("A_r1: "+str(A_r1_left))            
-            #print("A_r2: "+str(A_r2_left))
             cap_r1 = r1.cargarDesdeAristas(A_r1_left)
             cap_r2 = r2.cargarDesdeAristas(A_r2_left)
             r1.setCapacidad(cap_r1)
             r2.setCapacidad(cap_r2)
             costoSolucion += r1.getCostoAsociado() + r2.getCostoAsociado()
-            # print("Swap 3-opt")
-            # print("cap r1: ",cap_r1)
-            # print("r1: "+ str(r1.getV()) + "      -> costo: "+str(r1.getCostoAsociado()))
-            # print("cap r2: ",cap_r2)
-            # print("r2: "+ str(r2.getV()) + "      -> costo: "+str(r2.getCostoAsociado()))
+        
         #3-opt en la misma ruta
         # r: 1,2,a,3,4,5,b,6,7,8      -> ruta original 
-        # resultado:
         # r: 1,2,a,b,3,4,5,6,7,8      -> 1ra opcion
         # r: 1,2,b,a,3,4,5,6,7,8      -> 2da opcion
         # r: 1,2,3,4,5,b,a,6,7,8      -> 3ra opcion
@@ -1310,9 +1418,6 @@ class Solucion(Grafo):
             V_r_left = V_r[:ind_A[0]]
             V_r_middle = V_r[ind_A[0]+1:ind_A[1]+1]
             V_r_right = V_r[ind_A[1]+2:]
-            #print("V_r_r: "+str(V_r_right))
-            #print("V_r_m: "+str(V_r_middle))
-            #print("V_r_l: "+str(V_r_left))
             
             # if(opcion == -1 or opcion == -2):
             #     #print("1ra opcion")
@@ -1359,22 +1464,22 @@ class Solucion(Grafo):
         
         return rutas
     
-    def evaluar_4opt(self, arista_ini, ind_rutas, ind_A, rutas):
-        """
-        4-opt: (a,b)
-        r1: 1,2,3,a,4,5,6        r2: 1,7,8,b,9,10,11,12
-        resultado:
-        r1: 1,2,3,a,b,5,6        r2: 1,7,8,4,9,10,11,12       -> 1ra opcion        
-        r1: 1,2,b,a,4,5,6        r2: 1,7,8,3,9,10,11,12       -> 2da opcion
-        r1: 1,2,3,9,4,5,6        r2: 1,7,8,b,a,10,11,12       -> 3ra opcion
-        r1: 1,2,3,8,4,5,6        r2: 1,7,a,b,9,10,11,12       -> 4ta opcion 
-        r: 1,2,3,a,4,5,6,b,7,8  -> Original
-        resultado:
-        r: 1,2,3,a,b,5,6,4,7,8  -> 1ra opcion
-        r: 1,2,b,a,4,5,3,6,7,8  -> 2da opcion        
-        r: 1,2,3,7,4,5,6,b,a,8  -> 3ra opcion
-        r: 1,2,3,6,4,5,a,b,7,8  -> 4ta opcion
-        """
+    """
+    4-opt: (a,b)
+    r1: 1,2,3,a,4,5,6        r2: 1,7,8,b,9,10,11,12
+    resultado:
+    r1: 1,2,3,a,b,5,6        r2: 1,7,8,4,9,10,11,12       -> 1ra opcion        
+    r1: 1,2,b,a,4,5,6        r2: 1,7,8,3,9,10,11,12       -> 2da opcion
+    r1: 1,2,3,9,4,5,6        r2: 1,7,8,b,a,10,11,12       -> 3ra opcion
+    r1: 1,2,3,8,4,5,6        r2: 1,7,a,b,9,10,11,12       -> 4ta opcion 
+    r: 1,2,3,a,4,5,6,b,7,8  -> Original
+    resultado:
+    r: 1,2,3,a,b,5,6,4,7,8  -> 1ra opcion
+    r: 1,2,b,a,4,5,3,6,7,8  -> 2da opcion        
+    r: 1,2,3,7,4,5,6,b,a,8  -> 3ra opcion
+    r: 1,2,3,6,4,5,a,b,7,8  -> 4ta opcion
+    """
+    def evaluar_4opt(self, arista_ini, ind_rutas, ind_A, rutas, invR):
         
         opcion = 0
         costo_solucion = float("inf")
@@ -1395,7 +1500,6 @@ class Solucion(Grafo):
 
             """
             r1: 1,2,a,3      r2: 1,5,b,6
-            resultado:
             r1: 1,2,a,b      r2: 1,5,3,6       -> 1ra opcion        
             r1: 1,b,a,3      r2: 1,5,2,6       -> 2da opcion
             r1: 1,2,6,3      r2: 1,5,b,a       -> 3ra opcion
@@ -1406,6 +1510,7 @@ class Solucion(Grafo):
             
             for i in range(1,5):
                 arista_ini = copy.deepcopy(aristaInicial)
+                
                 if((i==2 or i==4) and (0 in ind_A or 1 in ind_A)):
                     continue
                 if((i == 1 or i==3) and (len(r1.getV())-1 == ind_A[0] or len(r2.getV())-1 == ind_A[1]+1)):
@@ -1418,17 +1523,10 @@ class Solucion(Grafo):
                     #r1: 1,2,3,a,4,5,6        r2: 1,7,8,b,9,10,11,12
                     #r1: 1,2,3,a,b,5,6        r2: 1,7,8,4,9,10,11,12       -> 1ra opcion
                     #print("Opcion ", i)
-                    try:
-                        A_r1_drop1 = A_r1[ind_A[0]]
-                        A_r1_drop2 = A_r1[ind_A[0]+1]
-                        A_r2_drop1 = A_r2[ind_A[1]]
-                        A_r2_drop2 = A_r2[ind_A[1]+1]
-                    except IndexError:
-                        print("Arista ini: "+str(arista_ini))
-                        print("A_r1: "+str(A_r1))
-                        print("A_r2: "+str(A_r2))
-                        print("ind_A: "+str(ind_A))
-                        a = 1/0
+                    A_r1_drop1 = A_r1[ind_A[0]]
+                    A_r1_drop2 = A_r1[ind_A[0]+1]
+                    A_r2_drop1 = A_r2[ind_A[1]]
+                    A_r2_drop2 = A_r2[ind_A[1]+1]
                     A_r1_add1 = arista_ini
 
                     V_origen = A_r2_drop1.getDestino()
@@ -1446,8 +1544,10 @@ class Solucion(Grafo):
                     peso = self._matrizDistancias[V_origen.getValue()-1][V_destino.getValue()-1]
                     A_r2_add2 = Arista(V_origen, V_destino, peso)
                 
-                    if(A_r1_add1.getDestino() != A_r1_add2.getOrigen()):
-                        arista_ini.invertir()
+                    if(A_r1_add1.getDestino() != A_r1_add2.getOrigen()):  #Si de (a,b), b != b de (b,5)
+                        arista_ini = self.invertirArista(arista_ini)
+                        #arista_ini.invertir()
+                
                 elif(i == 2):
                     #print("Opcion ", i)
                     #r1: 1,2,3,a,4,5,6        r2: 1,7,8,b,9,10,11,12
@@ -1458,6 +1558,7 @@ class Solucion(Grafo):
                     A_r2_drop2 = A_r2[ind_A[1]+1]
 
                     A_r1_add2 = arista_ini
+                    A_r1_add2 = self.invertirArista(A_r1_add2)
 
                     V_origen = A_r1_drop1.getOrigen()
                     V_destino = A_r2_drop1.getDestino()
@@ -1484,6 +1585,7 @@ class Solucion(Grafo):
                     A_r2_drop2 = A_r2[ind_A[1]+2]
 
                     A_r2_add1 = arista_ini
+                    A_r2_add1 = self.invertirArista(A_r2_add1)
 
                     V_origen = A_r1_drop1.getOrigen()
                     V_destino = A_r2_drop1.getDestino()
@@ -1564,6 +1666,10 @@ class Solucion(Grafo):
             if(len(A_r) <= 2):
                 return costo_solucion, opcion, [], []
             
+            if invR:
+                arista_ini = self.invertirArista(arista_ini)
+                aristaInicial = copy.deepcopy(arista_ini)
+
             for i in range(1,5):
                 if(i==2 and (0 in ind_A or 1 in ind_A)):
                     continue
@@ -1574,6 +1680,8 @@ class Solucion(Grafo):
                 if((i==1 or i==4) and (ind_A[1]-ind_A[0] <= 2)):
                     continue
                 
+                arista_ini = copy.deepcopy(aristaInicial)
+
                 if(i == 1):
                     # r: 1,2,3,a,4,5,6,b,7,8  -> Original
                     # r: 1,2,3,a,b,5,6,4,7,8  -> 1ra opcion
@@ -1584,6 +1692,7 @@ class Solucion(Grafo):
                     A_r_drop4 = A_r[ind_A[1]+1]
 
                     A_r_add1 = arista_ini
+                    
                     V_origen = A_r_drop4.getOrigen()
                     V_destino = A_r_drop2.getDestino()
                     peso = self._matrizDistancias[V_origen.getValue()-1][V_destino.getValue()-1]
@@ -1601,6 +1710,16 @@ class Solucion(Grafo):
 
                     if(A_r_add1.getDestino() != A_r_add2.getOrigen()):
                         arista_ini.invertir()
+                    
+                    print("A_r_add1: "+str(A_r_add1))
+                    print("A_r_add2: "+str(A_r_add2))
+                    print("A_r_add3: "+str(A_r_add3))
+                    print("A_r_add4: "+str(A_r_add4))
+                    print("A_r_drop1: "+str(A_r_drop1))
+                    print("A_r_drop2: "+str(A_r_drop2))
+                    print("A_r_drop3: "+str(A_r_drop3))
+                    print("A_r_drop4: "+str(A_r_drop4))
+                    
                 elif(i == 2):
                     # r: 1,2,3,a,4,5,6,b,7,8  -> Original
                     # r: 1,2,b,a,4,5,3,6,7,8  -> 2da opcion
@@ -1610,6 +1729,7 @@ class Solucion(Grafo):
                     A_r_drop4 = A_r[ind_A[1]+1]
                     
                     A_r_add2 = arista_ini
+                    A_r_add2 = self.invertirArista(A_r_add2)
 
                     V_origen = A_r_drop1.getOrigen()
                     V_destino = A_r_drop4.getOrigen()
@@ -1639,6 +1759,7 @@ class Solucion(Grafo):
                     A_r_drop4 = A_r[ind_A[1]+2]
 
                     A_r_add3 = arista_ini
+                    A_r_add3 = self.invertirArista(A_r_add3)
 
                     V_origen = A_r_drop1.getOrigen()
                     V_destino = A_r_drop3.getDestino()
@@ -1720,7 +1841,6 @@ class Solucion(Grafo):
         #Cada ruta de al menos 4 aristas o 3 clientes. Si a o b estan al final: los intercambio
         ind_A_inicial = copy.copy(ind_A)
         
-        
         if(opcion > 0):
             if(opcion==1 or opcion == 2):
                 r1 = rutas[ind_rutas[0]]
@@ -1753,28 +1873,34 @@ class Solucion(Grafo):
                     arista_nueva.setId(V_origen.getValue()-1, V_destino.getValue()-1, len(self._matrizDistancias))
                     ADD = [arista_nueva]                    
                 else:
-                    ADD = [arista_ini.getAristaInvertida()]
+                    ADD = [self.invertirArista(arista_ini)]
                     ind_A[0] += 1          
                     ind_A[1] -= 1
                 DROP = []
 
             costo_solucion -= r1.getCostoAsociado()+r2.getCostoAsociado()
             
-            V_r1 = r1.getV()
+            # r1: 1,2,3,a,4,5,6        r2: 1,7,8,b,9,10,11,12
+            # resultado:
+            # r1: 1,2,3,a,b,5,6        r2: 1,7,8,4,9,10,11,12       -> 1ra opcion        
+            # r1: 1,2,b,a,4,5,6        r2: 1,7,8,3,9,10,11,12       -> 2da opcion
+            # r1: 1,2,3,9,4,5,6        r2: 1,7,8,b,a,10,11,12       -> 3ra opcion
+            # r1: 1,2,3,8,4,5,6        r2: 1,7,a,b,9,10,11,12       -> 4ta opcion 
+            V_r1 = r1.getV()    # 1,7,8,b,9,10,11,12
             if(V_r1[-1] != 1):
-                V_r1.append(Vertice(1,0))
-            
-            if(V_origen == V_r1[-2] and opcion!=2):
-                V_r1 = V_r1[::-1]
-                ind_A[0] = 1
+                V_r1.append(Vertice(1,0))   # 1,7,8,b,9,10,11,12,1
+
+            # if V_origen == V_r1[-2] and opcion !=2: # Si 12 == b y 
+            #     V_r1 = V_r1[::-1]
+            #     ind_A[0] = 1
             
             V_r2 = r2.getV()
             if(V_r2[-1] != 1 ):
                 V_r2.append(Vertice(1,0))
 
-            if(V_destino == V_r2[-2] and opcion!=2):
-                V_r2 = V_r2[::-1]
-                ind_A[1] = 0
+            # if(V_destino == V_r2[-2] and opcion!=2):
+            #     V_r2 = V_r2[::-1]
+            #     ind_A[1] = 0
             
             V_r1_left = V_r1[:ind_A[0]+1]
             V_r1_right = V_r1[ind_A[0]+2:]
@@ -1855,14 +1981,6 @@ class Solucion(Grafo):
             r1.setCapacidad(cap_r1)
             r2.setCapacidad(cap_r2)
 
-            # if(cap_r1 > self.__capacidadMax or cap_r2 > self.__capacidadMax):
-            #     print("r1: "+str(r1))
-            #     print("r2: "+str(r2))
-            #     print("ADD: "+str(ADD))
-            #     print("DROP: "+str(DROP))
-            #     print("Opcion: "+str(opcion))
-            #     a = 1/0
-
         #4-opt en la misma ruta. Condicion: Deben haber 4 aristas de separacion entre a y b, si no se realiza 2-opt
         else:
             # r: 1,2,3,a,4,5,6,b,7,8  -> Original
@@ -1895,7 +2013,6 @@ class Solucion(Grafo):
                 A_r_add2 = Arista(V_origen, V_destino, peso)
                 A_r_add2.setId(V_origen.getValue()-1, V_destino.getValue()-1, len(self._matrizDistancias))
 
-
                 V_origen = A_r_drop3.getOrigen()
                 V_destino = A_r_drop1.getDestino()
                 peso = self._matrizDistancias[V_origen.getValue()-1][V_destino.getValue()-1]
@@ -1909,7 +2026,7 @@ class Solucion(Grafo):
                 A_r_add4.setId(V_origen.getValue()-1, V_destino.getValue()-1, len(self._matrizDistancias))
 
                 if(A_r_add1.getDestino() != A_r_add2.getOrigen()):
-                    arista_ini.invertir()
+                    arista_ini = self.invertirArista(arista_ini)
 
                 # print("A_r_add1: "+str(A_r_add1))
                 # print("A_r_add2: "+str(A_r_add2))
@@ -1934,6 +2051,7 @@ class Solucion(Grafo):
                 A_r_drop4 = A_r[ind_A[1]+1]
 
                 A_r_add2 = arista_ini
+                A_r_add2 = self.invertirArista(A_r_add2)
 
                 V_origen = A_r_drop1.getOrigen()
                 V_destino = A_r_drop4.getOrigen()
@@ -1954,7 +2072,8 @@ class Solucion(Grafo):
                 A_r_add4.setId(V_origen.getValue()-1, V_destino.getValue()-1, len(self._matrizDistancias))
 
                 if(A_r_add1.getDestino() != A_r_add2.getOrigen()):
-                    arista_ini.invertir()
+                    arista_ini = self.invertirArista(arista_ini)
+                    # arista_ini.invertir()
             elif(opcion == -3):
                 # r: 1,2,3,a,4,5,6,b,7,8  -> Original
                 # r: 1,2,3,7,4,5,6,b,a,8  -> 3ra opcion
@@ -1968,6 +2087,7 @@ class Solucion(Grafo):
                 A_r_drop4 = A_r[ind_A[1]+2]
 
                 A_r_add3 = arista_ini
+                A_r_add3 = self.invertirArista(A_r_add3)
 
                 V_origen = A_r_drop1.getOrigen()
                 V_destino = A_r_drop3.getDestino()
@@ -1988,7 +2108,8 @@ class Solucion(Grafo):
                 A_r_add4.setId(V_origen.getValue()-1, V_destino.getValue()-1, len(self._matrizDistancias))
                 
                 if(A_r_add3.getDestino() != A_r_add4.getOrigen()):
-                    arista_ini.invertir()
+                    arista_ini = self.invertirArista(arista_ini)
+                    # arista_ini.invertir()
             else:
                 # r: 1,2,3,a,4,5,6,b,7,8  -> Original
                 # r: 1,2,3,6,4,5,a,b,7,8  -> 4ta opcion
@@ -2023,7 +2144,8 @@ class Solucion(Grafo):
                 A_r_add3.setId(V_origen.getValue()-1, V_destino.getValue()-1, len(self._matrizDistancias))
 
                 if(A_r_add3.getDestino() != A_r_add4.getOrigen()):
-                    arista_ini.invertir()
+                    arista_ini = self.invertirArista(arista_ini)
+                    # arista_ini.invertir()
 
             A_r_left.append(A_r_add1)
             A_r_left.append(A_r_add2)
@@ -2069,40 +2191,24 @@ class Solucion(Grafo):
             rutasInfactibles = rutasInfactibles - set({indR1, indR2})
             return rutas, True, rutasInfactibles
 
+    """
+    Rutas: 
+    r1: 1,2,3,a,4,5,6,7,1          r2: 1,8,9,10,b,11,12,1       Original
+    r1: 1,2,3,a,b,11,6,7,1         r2: 1,8,9,10,12,1            Opcion 1
+    r1: 1,2,3,10,b,a,4,6,7,1       r2: 1,8,9,11,12,1            Opcion 2    x
+    r1: 1,2,3,5,6,7,1              r2: 1,8,9,10,b,a,4,11,12,1   Opcion 3    x
+    r1: 1,2,4,5,6,7,1              r2: 1,8,9,10,3,a,b,11,12,1   Opcion 4
+    Misma ruta:
+    r1: 1,2,3,a,4,5,6,7,8,b,9,10,11,1   original
+    r1: 1,2,3,a,b,9,4,5,6,7,8,10,11,1   Opcion 1
+    r1: 1,2,3,8,b,a,4,5,6,7,9,10,11,1   Opcion 2    x
+    r1: 1,2,3,5,6,7,8,b,a,4,9,10,11,1   Opcion 3    x
+    r1: 1,2,4,5,6,7,8,3,a,b,9,10,11,1   Opcion 4
+
+    r1: 1,2,3,b,4,5,6,7,8,a,9,10,11,1   original
+    r1: 1,2,3,8,a,b,4,5,6,7,9,10,11,1   Opcion 2    x
+    """
     def evaluar_Exchange(self, aristaIni, ind_rutas, ind_A, rutas):
-        """
-        Dos rutas distintas:
-            Rutas: 
-                r1: 1,2,3,a,4,5,6,7,1
-                r2: 1,8,9,10,b,11,12,1
-            Opción 1:
-                r1: 1,2,3,a,b,11,6,7,1
-                r2: 1,8,9,10,12,1
-            Opción 2:
-                r1: 1,2,3,10,b,a,4,11,6,7,1
-                r2: 1,8,9,11,12,1
-            Opción 3:
-                r1: 1,2,3,5,6,7,1
-                r2: 1,8,9,10,b,a,4,11,12,1
-            Opción 4:
-                r1: 1,2,4,5,6,7,1
-                r2: 1,8,9,10,3,a,b,11,12,1
-
-        Misma ruta:
-            Ruta:
-                r1: 1,2,3,a,4,5,6,7,8,b,9,10,11,1
-
-            Opción 1:
-                r1: 1,2,3,a,b,9,4,5,6,7,8,10,11,1
-            Opción 2:
-                r1: 1,2,3,8,b,a,4,5,6,7,9,10,11,1
-            Opción 3:
-                r1: 1,2,3,5,6,7,8,b,a,4,9,10,11,1
-            Opción 4:
-                r1: 1,2,4,5,6,7,8,3,a,b,9,10,11,1
-        """
-        
-
         opciones = []
         DROP = []
         index_DROP = []
@@ -2115,6 +2221,7 @@ class Solucion(Grafo):
         costoSolucion = float("inf")
         opcionRet = 0
         tam = len(self._matrizDistancias)
+        
         if ind_rutas[0]!=ind_rutas[1]:
             r1 = rutas[ind_rutas[0]]
             r2 = rutas[ind_rutas[1]]
@@ -2144,7 +2251,6 @@ class Solucion(Grafo):
 
         if distintasRutas:
             for opcion in opciones:
-
                 aR1 = r1.getA()
                 aR2 = r2.getA()
                                     
@@ -2160,15 +2266,19 @@ class Solucion(Grafo):
                     antB = aR2[ind_A[1]-1]
                     sigSigB = aR2[ind_A[1]+2]
                 elif opcion == 2:
+                    """
+                    r1: 1,2,3,a,4,5,6,7,1          r2: 1,8,9,10,b,11,12,1       Original
+                    r1: 1,2,3,10,b,a,4,6,7,1       r2: 1,8,9,11,12,1            Opcion 2    x
+                    """
                     demandaR1 = r1.getCapacidad()
-                    b = aR2[ind_A[1]-1]
-                    sigB = aR2[ind_A[1]]
+                    b = aR2[ind_A[1]-1]     # (9, 10)
+                    sigB = aR2[ind_A[1]]    # (10, b)
                     demR1 = demandaR1 + b.getOrigen().getDemanda() + sigB.getOrigen().getDemanda()
                     if demR1 > self.getCapacidadMax():
                         continue
-                    a = aR1[ind_A[0]-1]
-                    sigA = aR1[ind_A[0]]
-                    antB = aR2[ind_A[1]-2]
+                    a = aR1[ind_A[0]-1]     # (3,a)
+                    sigA = aR1[ind_A[0]]    # (a,4)
+                    antB = aR2[ind_A[1]-2]  # ()
                     sigSigB = aR2[ind_A[1]+1]    
                 elif opcion == 3:
                     demandaR1 = r2.getCapacidad()
@@ -2195,7 +2305,7 @@ class Solucion(Grafo):
 
 
                 costo = M[a.getOrigen().getValue()-1][b.getOrigen().getValue()-1]
-                ADD1 = Arista(a.getOrigen(),b.getOrigen(),costo, tam)
+                ADD1 = Arista(a.getOrigen(),b.getOrigen(),costo, tam)   # (3,9)
                 ADD1.setId(a.getOrigen().getValue()-1, b.getOrigen().getValue()-1, len(M))
 
                 costo = M[sigB.getOrigen().getValue()-1][sigA.getOrigen().getValue()-1]
@@ -2441,6 +2551,7 @@ class Solucion(Grafo):
 
         return rutas
 
+
     def eliminarRutasSobrantes(self, rutas, nroVehiculos, capacidad):
         """ La idea sería:
                 1)Elegir como ruta sobrante, la que tenga menos vértices, si hay más de una, ordenarlas de
@@ -2627,19 +2738,6 @@ class Solucion(Grafo):
             return ind
         else:
             return []
-
-    def sizeOf(self, obj):
-        tam = sys.getsizeof(obj)
-        k = 1000
-        #print(tam)
-        if tam> k**3:
-            print(str(int(tam/(k**3))) + " GB y"+str(tam%(k**3))+" MB's")
-        elif tam> k**2:
-            print(str(int(tam/(k**2))) + " MB y"+str(tam%(k**2))+" KB's")
-        elif tam >= k**1:
-            print(str(int(tam/(k**1)))+ " KB y"+str(tam%(k**1))+" bytes")
-        else:
-            print(str(tam) + " Bytes")
 
     def controlaCapacidad(self, rutas, capMax):
         for r in rutas:
