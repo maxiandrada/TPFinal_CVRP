@@ -228,6 +228,7 @@ class Grafo:
         new_edge = Arista(Vfila, Vcol, dist)
         new_edge.setId(fila, col, len(self._matrizDistancias))
         self._A.append(new_edge)
+        self.addIdListAristas(new_edge.getId())
         demAcum += new_edge.getOrigen().getDemanda()
         self._demandaAcumulada.append(demAcum)
         costo+=dist
@@ -309,7 +310,7 @@ class Grafo:
         new_edge = None
         self.borraIdListAristas()
         for i in range(0,len(seq)):
-            if(i< len(seq)-1):
+            if i < len(seq)-1:
                 fila = seq[i].getValue()-1
                 col = seq[i+1].getValue()-1
                 dist = self.getMatriz()[fila][col]
@@ -366,4 +367,3 @@ class Grafo:
     def incrementaFrecuencia(self):
         for x in range(0,len(self.getA())):
             self.getA()[x].incFrecuencia()
-

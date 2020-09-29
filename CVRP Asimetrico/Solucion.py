@@ -437,8 +437,8 @@ class Solucion(Grafo):
             
             indR = [indRutas[0], indRutas[1]]
             indA = [indAristas[0], indAristas[1]]
-            print("InvR: ", invR)
-            print("aristaIni: "+str(aristaIni))
+            # print("InvR: ", invR)
+            # print("aristaIni: "+str(aristaIni))
             nuevoCosto, tipo_2opt, DROP_2opt, indDROP_2opt = self.evaluar_2opt(aristaIni, indR, indA, rutas, invR)
             aristaIni = copy.deepcopy(aristaIniOrig)
             if(nuevoCosto < costoSolucion):
@@ -450,7 +450,7 @@ class Solucion(Grafo):
             
             indR = [indRutas[0], indRutas[1]]
             indA = [indAristas[0], indAristas[1]]
-            print("aristaIni: "+str(aristaIni))
+            # print("aristaIni: "+str(aristaIni))
             nuevoCosto, tipo_3opt, DROP_3opt, indDROP_3opt = self.evaluar_3opt(aristaIni, indR, indA, rutas, invR)
             aristaIni = copy.deepcopy(aristaIniOrig)
             if(nuevoCosto < costoSolucion or (condEstancamiento and nuevoCosto!=float("inf")) ):
@@ -462,7 +462,7 @@ class Solucion(Grafo):
             
             indR = [indRutas[0], indRutas[1]]
             indA = [indAristas[0], indAristas[1]]
-            print("aristaIni: "+str(aristaIni))
+            # print("aristaIni: "+str(aristaIni))
             nuevoCosto, tipo_4opt, DROP_4opt, indDROP_4opt = self.evaluar_4opt(aristaIni, indR, indA, rutas, invR)
             aristaIni = copy.deepcopy(aristaIniOrig)
             if(nuevoCosto < costoSolucion or (condEstancamiento and nuevoCosto!=float("inf")) ):
@@ -474,7 +474,7 @@ class Solucion(Grafo):
             
             indR = [indRutas[0], indRutas[1]]
             indA = [indAristas[0], indAristas[1]]
-            print("aristaIni: "+str(aristaIni))
+            # print("aristaIni: "+str(aristaIni))
             nuevoCosto, tipo_exch, DROP_exch, indDROP_exch  = self.evaluar_Exchange(aristaIni, indR, indA, rutas)
             aristaIni = copy.deepcopy(aristaIniOrig)
             if(nuevoCosto < costoSolucion or (condEstancamiento and nuevoCosto!=float("inf")) ):
@@ -486,7 +486,7 @@ class Solucion(Grafo):
                 #ADD = ADD_exch
                 #indADD = indADD_exch
 
-            print("aristaIni: "+str(aristaIni))
+            # print("aristaIni: "+str(aristaIni))
             ADD.append(aristaIniOrig)
             indADD.append(aristaIni.getId())
 
