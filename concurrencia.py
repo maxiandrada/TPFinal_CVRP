@@ -5,6 +5,10 @@ from CVRP import CVRP
 # from CVRPparalelo import CVRPparalelo
 from Vertice import Vertice
 
+from multiprocessing import Pool
+import contextlib
+import torch.multiprocessing as mp
+
 import os
 from os import listdir
 from os.path import isfile, join
@@ -12,25 +16,6 @@ import ntpath
 import sys
 import numpy as np
 
-
-def find(name, path):
-    for root, dirs, files in os.walk(path):
-        if name in files:
-            return os.path.join(root, name)
-
-def findAll(match, exc, path):
-    lista = []
-    if exc == "none":
-        for root, dirs, files in os.walk(path):
-            for f in files:
-                if f.find(match) != -1 and f.endswith(".vrp"):
-                    lista.append(os.path.join(root, f))
-    else:
-        for root, dirs, files in os.walk(path):
-            for f in files:
-                if f.find(match) != -1 and f.endswith(".vrp") and f.lower().find(exc.lower())==-1:
-                    lista.append(os.path.join(root, f))
-    return lista
 
 def cargarDesdeFile(pathArchivo):
     #+-+-+-+-+-Para cargar la distancias+-+-+-+-+-+-+-+-
@@ -183,14 +168,31 @@ def cargarDesdeFile2(pathArchivo):
                 demandas.append(float(splitLinea[1]))
         return nroVehiculos, optimo, capacidad, matrizDist, demandas     
 
+def solve(cvrp):
+    cvrp.tabuSearch()
+    return "termino"
 
-direccion = sys.argv[1]  
-time = sys.argv[2]
+direccion = "/home/alejandro/windows/COSAS SALVADAS/unsa/LAS/Opt - Optimización Concurrente y Paralela/tpFinal/TPFinal_CVRP/Instancias/Set A/A-n32-k5.vrp"
 
 nombre = os.path.basename(direccion)
 
 nroVehiculos, optimo, capacidad, matrizDist, demandas = cargarDesdeFile2(direccion)
 tenureADD = int(len(matrizDist)**(1/2.0))
 tenureDROP = int(len(matrizDist)**(1/2.0))+1
-cvrp = CVRP(matrizDist, demandas, nroVehiculos, capacidad, nombre+"_"+str(time)+"min", 'secuencial', 0, tenureADD, tenureDROP, time, 0, optimo)
-cvrp.tabuSearch()
+time = 5
+
+lista = []
+for i in range(3):
+    c = CVRP(matrizDist, demandas, nroVehiculos, capacidad, nombre+"_"+str(time)+"min", 'concurrencia', 0, tenureADD, tenureDROP, time, 0, optimo)
+    lista.append(c)
+process = []
+for i in range(3):
+    process.append(mp.Process(target=solve, args=(lista.pop(),)))
+    process[i].start()
+    print ("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<---------------------------------------")
+
+for i in range(3):
+    process[i].join()
+
+# with contextlib.closing(Pool(processes= 3)) as pool:
+#     print (pool.map(solve, lista))
