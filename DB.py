@@ -18,6 +18,7 @@ def DB():
     sql_sets_table = """CREATE TABLE IF NOT EXISTS Sets (
                         setId integer  PRIMARY KEY AUTOINCREMENT,
                         setName text NOT NULL
+                        
                         );"""
 
     sql_instancias_table =   """CREATE TABLE IF NOT EXISTS Instancias (
@@ -40,7 +41,8 @@ def DB():
                                 porcentajeError real NOT NULL,
                                 tiempoResolucion real NOT NULL,
                                 swaps text NOT NULL,
-                                solucionInicial text NOT NULL
+                                solucionInicial text NOT NULL,
+                                criterioTenure integer NOT NULL
                             );"""
 
     sql_solucion_table = """CREATE TABLE IF NOT EXISTS Soluciones (
@@ -48,7 +50,8 @@ def DB():
                             costo float NOT NULL,
                             rutas text NOT NULL,
                             origen  text NOT NULL,
-                            iteracion integer NOT null
+                            iteracion integer NOT null,
+                            costoRutas text NOT null
                             );
                         """
 
@@ -58,7 +61,9 @@ def DB():
                                     setId integer NOT NULL,
                                     PRIMARY KEY(instanciaId,setId),
                                     FOREIGN KEY (instanciaId) REFERENCES Instancia (instanciaId),
-                                    FOREIGN KEY (setId) REFERENCES Sets (setId)
+                                    FOREIGN KEY (setId) REFERENCES Sets (setId),
+                                    CONSTRAINT setId
+                                        ON DELETE CASCADE
                                 );"""
 
     sql_resolucionesXinstancia_table = """CREATE TABLE IF NOT EXISTS resolucionesXInstancia (
@@ -66,7 +71,9 @@ def DB():
                                             resolucionId integer NOT NULL,
                                             PRIMARY KEY(instanciaId,resolucionId),
                                             FOREIGN KEY (resolucionId) REFERENCES Resoluciones (resolucionId),
-                                            FOREIGN KEY (instanciaId) REFERENCES Instancias (instanciaId)
+                                            FOREIGN KEY (instanciaId) REFERENCES Instancias (instanciaId),
+                                            CONSTRAINT instanciaId
+                                                ON DELETE CASCADE
                                         );"""
 
     sql_solucionXresolucion_table = """CREATE TABLE IF NOT EXISTS solucionXresolucion (
@@ -75,6 +82,8 @@ def DB():
                                             PRIMARY KEY(solucionId,resolucionId),
                                             FOREIGN KEY (resolucionId) REFERENCES Resoluciones (resolucionId),
                                             FOREIGN KEY (solucionId) REFERENCES Soluciones (solucionId)
+                                            CONSTRAINT resolucionId
+                                                ON DELETE CASCADE
                                         );"""
     
 
@@ -113,7 +122,14 @@ def insert_set(conn,_set):
     return cur.lastrowid
 
 def insert_resolucion(conn,resolucion):
-    sql = ''' INSERT INTO Resoluciones (iteraciones,optimoEncontrado,tenueADD,tenureDROP,porcentajeError,tiempoResolucion,swaps, solucionInicial) VALUES (?,?,?,?,?,?,?,?) '''
+    sql = ''' INSERT INTO Resoluciones (iteraciones,
+                                        optimoEncontrado,
+                                        tenueADD,tenureDROP,
+                                        porcentajeError,
+                                        tiempoResolucion,
+                                        swaps,
+                                        solucionInicial,
+                                        criterioTenure) VALUES (?,?,?,?,?,?,?,?,?) '''
 
     cur = conn.cursor()
     cur.execute(sql, resolucion)
@@ -139,7 +155,7 @@ def insert_instancia(conn,instancia):
     return cur.lastrowid
 
 def insert_solucion(conn, solucion):
-    sql = ''' INSERT INTO Soluciones (costo,rutas,origen,iteracion) VALUES (?,?,?,?) '''
+    sql = ''' INSERT INTO Soluciones (costo, rutas, origen, iteracion, costoRutas) VALUES (?,?,?,?,?) '''
     cur = conn.cursor()
 
     cur.execute(sql, solucion)
@@ -147,7 +163,7 @@ def insert_solucion(conn, solucion):
 
     return cur.lastrowid
 
-def insert_solucionXResolucion(conn,solucionXresolucion):
+def insert_solucionXResolucion(conn, solucionXresolucion):
     sql = ''' INSERT INTO solucionXresolucion (resolucionId,solucionId) VALUES (?,?) '''
     cur = conn.cursor()
     cur.execute(sql, solucionXresolucion)
@@ -155,7 +171,7 @@ def insert_solucionXResolucion(conn,solucionXresolucion):
 
     return cur.lastrowid
 
-def insert_instanciaXSet(conn,InstanciaXSet):
+def insert_instanciaXSet(conn, InstanciaXSet):
     sql = ''' INSERT INTO InstanciasXSet (instanciaId,setId) VALUES (?,?) '''
     cur = conn.cursor()
     cur.execute(sql, InstanciaXSet)
@@ -165,7 +181,7 @@ def insert_instanciaXSet(conn,InstanciaXSet):
 
 
 ##SELECT'S
-def select_instancia(conn,instanciaId):
+def select_instancia(conn, instanciaId):
     sql =   f'''select *
                 from Instancias
                 WHERE instanciaId = {instanciaId}'''
@@ -174,7 +190,22 @@ def select_instancia(conn,instanciaId):
     filas = cur.fetchall()
     return filas
 
-def select_instanciaXSet(conn,setId):
+
+
+def select_instanciaCompletaXSet(conn, setId):
+    sql =   f'''SELECT *
+                FROM Instancias 
+                INNER JOIN InstanciasXSet ON InstanciasXSet.instanciaId = Instancias.instanciaId
+                WHERE setId = {setId}'''
+    cur = conn.cursor()
+    cur.execute(sql)
+    filas = cur.fetchall()
+    return filas
+
+
+
+def select_instanciaXSet(conn, setId):
+    """Solo consulta los datos 'simples' de la instancia, no incluye la matriz ni las demandas"""
     sql =   f'''select Instancias.instanciaId,instanciaName,cantidadClientes,nroVehiculos,capacidad,optimoConocido
                 from Instancias INNER  JOIN InstanciasXSet ON InstanciasXSet.instanciaId = Instancias.instanciaId
                 WHERE setId = {setId}'''
@@ -189,7 +220,14 @@ def select_sets(conn):
     cur.execute(sql)
     filas = cur.fetchall()
     return filas
-    
+   
+def select_sets_con_nombre(conn, nombre):
+    sql = f"SELECT * FROM Sets WHERE setName='{nombre}'"
+    cur = conn.cursor()
+    cur.execute(sql)
+    filas = cur.fetchall()
+    return filas
+
 def select_soluciones(conn, solucionId=None):
     if solucionId is None:
         sql = """select * from Soluciones"""
@@ -200,14 +238,28 @@ def select_soluciones(conn, solucionId=None):
     filas = cur.fetchall()
     return filas
 
-def select_solucionesXResolucion(conn,resolucionId):
-    sql =   f'''select Soluciones.solucionId,costo,rutas,origen,iteraciones
-                from Soluciones INNER  JOIN solucionXresolucion ON solucionXresolucion.solucionId = Soluciones.solucionId
-                WHERE resolucionId = {resolucionId}'''
+def select_solucionesXResolucion(conn, resolucionId):
+    sql = f'''select Soluciones.solucionId,costo,rutas,origen,iteracion
+            from Soluciones INNER JOIN solucionXresolucion ON solucionXresolucion.solucionId = Soluciones.solucionId
+            WHERE resolucionId = {resolucionId}'''
     cur = conn.cursor()
     cur.execute(sql)
     filas = cur.fetchall()
     return filas
+
+
+def selectSwapsInstancia(conn, instanciaId):
+    sql = f"""
+    select swaps from Resoluciones INNER JOIN resolucionesXInstancia     
+    ON resolucionesXInstancia.resolucionId = Resoluciones.resolucionId  
+    INNER JOIN Instancias                                               
+    ON resolucionesXInstancia.instanciaId = Instancias.instanciaId  
+    WHERE Instancias.instanciaId = {instanciaId}"""                           
+    cur = conn.cursor()
+    cur.execute(sql)
+    filas = cur.fetchall()
+    return filas
+
 
 def select_resoluciones(conn, resolucionId=None):
     if resolucionId is None:
@@ -228,8 +280,32 @@ def select_resolucionesXInstancia(conn,instanciaId):
     filas = cur.fetchall()
     return filas
 
+def select_reporte_total(conn, instanciaId):
+    sql = """
+        SELECT
+            instanciaName,
+            nroVehiculos,
+            cantidadClientes,
+            AVG(optimoEncontrado),
+            MIN(optimoEncontrado),
+            optimoConocido,
+            AVG(porcentajeError),
+            COUNT(*)
+        FROM
+            Instancias INNER JOIN resolucionesXInstancia
+            ON Instancias.instanciaId = resolucionesXInstancia.instanciaId
+            INNER JOIN Resoluciones
+            ON resolucionesXInstancia.resolucionId = Resoluciones.resolucionId
+        WHERE
+            Instancias.instanciaId = %s
+        GROUP BY
+            instanciaName
+        """%instanciaId
+    cur = conn.cursor()
+    cur.execute(sql)
+    filas = cur.fetchall()
+    return filas
 
 
-
-if __name__ == '__main__':
+if  __name__ == '__main__':
     DB()

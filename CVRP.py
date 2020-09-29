@@ -16,7 +16,26 @@ import DB
 import json
 
 class CVRP:
-    def __init__(self, M, D, nroV, capac, archivo, carpeta, solI, tADD, tDROP, tiempo, porcentaje, optimo, coord = None, idInstancia = None):
+    def __init__(self,
+                 M,
+                 D,
+                 nroV,
+                 capac,
+                 archivo,
+                 carpeta,
+                 solI,
+                 tADD,
+                 tDROP,
+                 tiempo,
+                 porcentaje,
+                 optimo,
+                 cargarEnDB=None,
+                 idInstancia=None,
+                 criterioTenure=None,
+                 coordenadas=None,
+                 cantidad=None,
+                 orden=None,
+                 indBarra=None):
         self.__solInicial = ['Clark & Wright', 'Vecino cercano', 'Secuencial', 'Al azar']
         self._G = Grafo(M, D)                #Grafo original
         self.__S = Solucion(M, D, sum(D))    #Solucion general del CVRP
@@ -31,11 +50,11 @@ class CVRP:
         self.__optimosLocales = []           #Lista de optimos locales 
         self.__porcentajeParada = float(porcentaje) #Porcentaje de desvio minimo como condicion de parada
         self.__optimo = optimo               #Mejor valor de la instancia
-        self.__tenureADD =  tADD             
+        self.__tenureADD =  tADD
         self.__tenureMaxADD = int(tADD*1.7)
         self.__tenureDROP =  tDROP
         self.__tenureMaxDROP = int(tDROP*1.7)
-        self.__txt = clsTxt(str(archivo), str(carpeta), "nada", "nada")
+        self.__txt = clsTxt(str(archivo), str(carpeta))
         self.__tiempoMaxEjec = float(tiempo)
         self.escribirDatos()
         
@@ -45,19 +64,41 @@ class CVRP:
         self.__tiempoMaxEjec = self.__tiempoMaxEjec - ((time()-tiempoIni)/60)
         #tiempoIni = time()
         self.__S, strText = self.cargaSolucion(self.__rutas)
+        print("costo Total sol inicial", sum([x.getCostoAsociado() for x in self.__rutas ]))
         self.__txt.escribir(strText)
-        
+        self.__costosOptimosLocales = []
         #print("tiempo carga solucion: ", time()-tiempoIni)
         self.c = None
-        if coord is not None:
-            self.coordenadas = coord
+
         if idInstancia is not None:
             self.idInstancia = idInstancia
+        if criterioTenure is not None:
+            self.criterioTenure = criterioTenure
+        if coordenadas is not None:
+            self.coord = coordenadas
+        
         self.conn = DB.DB()
         #self.tabuSearch()
         self.swaps = [0]*4
-        self.__swapOptimoLocal = []          #tipo de swapo que usó para el óptimo local N
+        self.__swapOptimoLocal = []   #tipo de swapo que usó para el óptimo local N
         self.__iteracionOptimoLocal = []          #iteración en la que se encontró el optimo local
+        if cargarEnDB is None:
+            self.cargarEnDB = False
+        else:
+            self.cargarEnDB = cargarEnDB
+
+        if cantidad is not None and orden is not None:
+            if cantidad is not None:
+                self.cantidad = cantidad
+            
+            if orden is not None:
+                self.orden = orden
+            self.usarBarra = True
+        else:
+            self.usarBarra = False
+
+        if indBarra is not None:
+            self.indBarra = indBarra
 
     def getRutas(self):
         return self.__rutas
@@ -116,6 +157,14 @@ class CVRP:
         if indRutas is None:
             return self.hilo.signals.rutaLista.emit(rutas)
         return self.hilo.signals.ruta.emit({'rutas':rutas,"indRutas": indRutas})
+
+    def enviarProgreso(self, tiempoTotal, tiempoTranscurrido):
+        """Se envía la señal de progreso teniendo en cuenta el total del progreso"""
+        if self.usarBarra:
+            progreso = (tiempoTotal * self.orden + tiempoTranscurrido)/(tiempoTotal * self.cantidad)
+            if int(progreso)*100 % 2 == 0:
+                if self.hilo is not None:
+                    return self.hilo.signals.valorBarra.emit((progreso, self.indBarra))
 
     #Umbral de granularidad: phi = Beta*(c/(n+k))
     #Beta = 1  parametro de dispersion. Sirve para modificar el grafo disperso para incluir la diversificación y la intensificación
@@ -183,7 +232,7 @@ class CVRP:
         ind_AristasOpt = copy.deepcopy(ind_permitidos)
         print("Tiempo get AristasOpt: "+str(time()-tiempo))
         
-        self.almacenarOptimoLocal(nuevas_rutas,iterac,[0,0])
+        self.almacenarOptimoLocal(nuevas_rutas, iterac, [0,0])
 
         porcentaje = round(self.__S.getCostoAsociado()/self.__optimo -1.0, 3)
         print("Costo sol Inicial: "+str(self.__S.getCostoAsociado())+"      ==> Optimo: "+str(self.__optimo)+"  Desvio: "+str(round(porcentaje*100,3))+"%")
@@ -227,8 +276,8 @@ class CVRP:
                     if(len(self.__optimosLocales) >= 20):
                         self.__optimosLocales.pop(0)
 
-
                     self.almacenarOptimoLocal(nuevas_rutas,iterac,k_Opt)
+                    self.contarSwaps(k_Opt)
                     indOptimosLocales = -2
                     cond_Estancamiento = False
                     condPathRelinking = False
@@ -383,17 +432,25 @@ class CVRP:
             tiempoEjecuc = time()-tiempoIni
             iterac += 1
             iteracEstancamiento += 1
+            self.enviarProgreso(tiempoMax, tiempoEjecuc)
 
         #Fin del while. Imprimo los valores obtenidos
         self.escribirDatosFinales(tiempoIni, iterac, tiempoEstancamiento)
         
-        self.enviarRutasHilo(rutas_refer)
+        if(self.cargarEnDB):
+            self.enviarRutasHilo(rutas_refer)
+            t = time()
+            print("inicio carga base de datos")
+            self.datosParaDB(iterac, tiempoEjecuc)
+            print(f"tiempo en cargar en DB: {time()-t}")
+        self.enviarProgreso(tiempoMax, tiempoMax)
+
         t = time()
         print("inicio carga base de datos")
         self.datosParaDB(iterac,tiempoEjecuc)
         print(f"tiempo en cargar en DB: {time()-t}")
 
-    def datosParaDB(self, iterac,tiempo):
+    def datosParaDB(self, iterac, tiempo):
         s = self
         optimoEncontrado = self.__S.getCostoAsociado()
         porcentaje = optimoEncontrado/self.__optimo -1.0
@@ -407,8 +464,8 @@ class CVRP:
             json.dumps(s.swaps),
             s.__tipoSolucionIni
             )
-        idResolucion = DB.insert_resolucion(self.conn,resolucion)
-        DB.insert_resolucionXInstancia(self.conn,(idResolucion,self.idInstancia))
+        idResolucion = DB.insert_resolucion(self.conn, resolucion)
+        DB.insert_resolucionXInstancia(self.conn, (idResolucion, self.idInstancia))
         idSoluciones = []
         for i in range(len(self.__optimosLocales)):
             t = time()
@@ -426,8 +483,8 @@ class CVRP:
             idSoluciones.append(idSol)
         
         for j in idSoluciones:
-            DB.insert_solucionXResolucion(self.conn, (idResolucion,j))
-        
+            DB.insert_solucionXResolucion(self.conn, (idResolucion, j))
+      
     def getPermitidos(self, Aristas, umbral, solucion):
         AristasNuevas = []
         ind_permitidos = np.array([], dtype = int)
@@ -483,9 +540,9 @@ class CVRP:
         esFactible = False
         igualRec = False
         indDistTam = -1    
-        sigIndS = [0,1]
-        indS = [0,1]
-        indG = [0,1]
+        sigIndS = [0, 1]
+        indS = [0, 1]
+        indG = [0, 1]
         newS = []
         rutasInfactibles = set()
         indDistTam = self.igualesTam(S, G, indDistTam)
@@ -731,37 +788,3 @@ class CVRP:
         self.__swapOptimoLocal.pop(indice)
         self.__iteracionOptimoLocal.pop(indice)
 
-    def datosParaDB(self, iterac,tiempo):
-        s = self
-        optimoEncontrado = self.__S.getCostoAsociado()
-        porcentaje = optimoEncontrado/self.__optimo -1.0
-        resolucion = (
-            iterac,
-            optimoEncontrado,
-            s.__tenureADD,
-            s.__tenureDROP,
-            porcentaje*100,
-            tiempo,
-            json.dumps(s.swaps),
-            s.__tipoSolucionIni
-            )
-        idResolucion = DB.insert_resolucion(self.conn,resolucion)
-        DB.insert_resolucionXInstancia(self.conn,(idResolucion,self.idInstancia))
-        idSoluciones = []
-        for i in range(len(self.__optimosLocales)):
-            t = time()
-            costo = sum([c.getCostoAsociado() for c in self.__optimosLocales[i]])
-            rutas = []
-            for r in self.__optimosLocales[i]:
-                rutas.append(str(r.getV()))
-            S = (
-                costo,
-                json.dumps(rutas),
-                json.dumps(self.__swapOptimoLocal[i]),
-                self.__iteracionOptimoLocal[i],
-                )
-            idSol = DB.insert_solucion(self.conn, S)
-            idSoluciones.append(idSol)
-        
-        for j in idSoluciones:
-            DB.insert_solucionXResolucion(self.conn, (idResolucion,j))       
