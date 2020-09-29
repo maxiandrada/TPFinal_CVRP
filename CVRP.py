@@ -383,7 +383,7 @@ class CVRP:
             tiempoEjecuc = time()-tiempoIni
             iterac += 1
             iteracEstancamiento += 1
-
+        self.__txt.setTxtName (self.__txt.getTxtName()+"_"+str(round((self.__S.getCostoAsociado()/self.__optimo - 1.0)*100, 3))+"%")
         #Fin del while. Imprimo los valores obtenidos
         self.escribirDatosFinales(tiempoIni, iterac, tiempoEstancamiento)
         

@@ -183,14 +183,37 @@ def cargarDesdeFile2(pathArchivo):
                 demandas.append(float(splitLinea[1]))
         return nroVehiculos, optimo, capacidad, matrizDist, demandas     
 
+def ejecutaSecuencial(direccion, tiempo):
+    nombre = os.path.basename(direccion)
+    nroVehiculos, optimo, capacidad, matrizDist, demandas = cargarDesdeFile2(direccion)
+    if tiempo == None:
+        tiempo = int(len(matrizDist)**0.5)
+    tenureADD = int(len(matrizDist)**(1/2.0))
+    tenureDROP = int(len(matrizDist)**(1/2.0))+1
+    cvrp = CVRP(matrizDist, 
+                demandas, 
+                nroVehiculos, 
+                capacidad, 
+                nombre+"_"+str(tiempo)+"min", 
+                'secuencial', 
+                0, 
+                tenureADD, 
+                tenureDROP, 
+                tiempo, 
+                0, 
+                optimo
+                )
+    cvrp.tabuSearch()
 
-direccion = sys.argv[1]  
-time = sys.argv[2]
+# direccion = sys.argv[1]  
+# time = sys.argv[2]
 
-nombre = os.path.basename(direccion)
-
-nroVehiculos, optimo, capacidad, matrizDist, demandas = cargarDesdeFile2(direccion)
-tenureADD = int(len(matrizDist)**(1/2.0))
-tenureDROP = int(len(matrizDist)**(1/2.0))+1
-cvrp = CVRP(matrizDist, demandas, nroVehiculos, capacidad, nombre+"_"+str(time)+"min", 'secuencial', 0, tenureADD, tenureDROP, time, 0, optimo)
-cvrp.tabuSearch()
+match = str(sys.argv[1])
+exc = str(sys.argv[2])
+try:
+    tiempo = sys.argv[3]
+except IndexError:
+    tiempo = None
+for f in findAll(match, exc, os.getcwd()):
+    print ("AHORA SE EJECUTARÁ LA INSTANCIA :\n"+f)
+    ejecutaSecuencial(f, tiempo)
