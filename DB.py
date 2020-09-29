@@ -61,9 +61,7 @@ def DB():
                                     setId integer NOT NULL,
                                     PRIMARY KEY(instanciaId,setId),
                                     FOREIGN KEY (instanciaId) REFERENCES Instancia (instanciaId),
-                                    FOREIGN KEY (setId) REFERENCES Sets (setId),
-                                    CONSTRAINT setId
-                                        ON DELETE CASCADE
+                                    FOREIGN KEY (setId) REFERENCES Sets (setId)
                                 );"""
 
     sql_resolucionesXinstancia_table = """CREATE TABLE IF NOT EXISTS resolucionesXInstancia (
@@ -71,9 +69,7 @@ def DB():
                                             resolucionId integer NOT NULL,
                                             PRIMARY KEY(instanciaId,resolucionId),
                                             FOREIGN KEY (resolucionId) REFERENCES Resoluciones (resolucionId),
-                                            FOREIGN KEY (instanciaId) REFERENCES Instancias (instanciaId),
-                                            CONSTRAINT instanciaId
-                                                ON DELETE CASCADE
+                                            FOREIGN KEY (instanciaId) REFERENCES Instancias (instanciaId)
                                         );"""
 
     sql_solucionXresolucion_table = """CREATE TABLE IF NOT EXISTS solucionXresolucion (
@@ -82,8 +78,6 @@ def DB():
                                             PRIMARY KEY(solucionId,resolucionId),
                                             FOREIGN KEY (resolucionId) REFERENCES Resoluciones (resolucionId),
                                             FOREIGN KEY (solucionId) REFERENCES Soluciones (solucionId)
-                                            CONSTRAINT resolucionId
-                                                ON DELETE CASCADE
                                         );"""
     
 
@@ -247,7 +241,6 @@ def select_solucionesXResolucion(conn, resolucionId):
     filas = cur.fetchall()
     return filas
 
-
 def selectSwapsInstancia(conn, instanciaId):
     sql = f"""
     select swaps from Resoluciones INNER JOIN resolucionesXInstancia     
@@ -259,7 +252,6 @@ def selectSwapsInstancia(conn, instanciaId):
     cur.execute(sql)
     filas = cur.fetchall()
     return filas
-
 
 def select_resoluciones(conn, resolucionId=None):
     if resolucionId is None:

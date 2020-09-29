@@ -429,7 +429,7 @@ class GUI(QMainWindow):
         tablaInstancia.setRowCount(len(filasInstancias))
         tablaInstancia.setColumnCount(6)
         tablaInstancia.setHorizontalHeaderLabels(
-            ["ID Instancia", 'Nombre ', 'Clientes', "Vehículos", "Capacidad", "Optimo Conocido"])
+            ["ID Instancia", 'Nombre ', 'Clientes', "Vehículos", "Capacidad", "Óptimo Conocido"])
         for i in range(len(filasInstancias)):
             tablaInstancia.setItem(
                 i, 0, QTableWidgetItem(str(filasInstancias[i][0])))
@@ -443,6 +443,7 @@ class GUI(QMainWindow):
                 i, 4, QTableWidgetItem(str(filasInstancias[i][4])))
             tablaInstancia.setItem(
                 i, 5, QTableWidgetItem(str(filasInstancias[i][5])))
+        self.instanciaSeleccionada = filasInstancias[0][0]
         #tablaInstancia.selectRow(0)
         #tablaInstancia.setCurrentIndex(QtCore.QModelIndex().child(0,0))
 
@@ -580,7 +581,7 @@ class GUI(QMainWindow):
             True,#Este es para indicar de que cargue los datos en la DB
             idInstancia,
             criterioTenure, #Criterio que se tomó para calcular el tenure
-            coordenadas= self.coordenadas
+            coordenadas=self.coordenadas
         )
         self.dibujarRutaInicial(cvrp.getRutas())
         self.hiloGrafico = Worker(cvrp.tabuSearch)
@@ -786,7 +787,7 @@ class GUI(QMainWindow):
     def llenarTablaResoluciones(self, tablaResoluciones, instanciaId):
         filasResoluciones = DB.select_resolucionesXInstancia(
             self.conn, instanciaId)
-        # print(filasResoluciones)
+
 
         tablaResoluciones.setColumnCount(11)
         tablaResoluciones.setRowCount(len(filasResoluciones))
@@ -869,7 +870,6 @@ class GUI(QMainWindow):
     @QtCore.pyqtSlot(QtWidgets.QTreeWidgetItem)
     def establecerSolucionSeleccionada(self, grafico, coordenadas, arbol, nroVehiculos):
         filaSeleccionada = arbol.selectedItems()[0]
-        #print(dir(filaSeleccionada))
         if filaSeleccionada.parent() == None:
             rutas = []
             R = filaSeleccionada.child(0)
@@ -879,12 +879,14 @@ class GUI(QMainWindow):
             self.dibujarSolucion(grafico, rutas, coordenadas, nroVehiculos)
 
     def establecerResolucionSeleccionada(self, tabla, arbol, grafico, instancia):
+        print("Seleccionado tabla: ", tabla)
         self.resolucionSeleccionada = str(tabla.selectedItems()[10].text())
         arbol.clear()
-        print(self.resolucionSeleccionada)
         filasSoluciones = DB.select_solucionesXResolucion(
             self.conn, self.resolucionSeleccionada)
         items = []
+        print("resolución ", self.resolucionSeleccionada)
+        print("soluciones ", filasSoluciones)
         for s in filasSoluciones:
             rutas = json.loads(s[2])
             origen = json.loads(s[3])

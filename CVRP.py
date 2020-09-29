@@ -54,7 +54,7 @@ class CVRP:
         self.__tenureMaxADD = int(tADD*1.7)
         self.__tenureDROP =  tDROP
         self.__tenureMaxDROP = int(tDROP*1.7)
-        self.__txt = clsTxt(str(archivo), str(carpeta))
+        self.__txt = clsTxt(str(archivo), str(carpeta), "nada", "nada")
         self.__tiempoMaxEjec = float(tiempo)
         self.escribirDatos()
         
@@ -266,7 +266,7 @@ class CVRP:
                 porcentaje = round(nuevo_costo/self.__optimo -1.0, 3)
 
                 #Si la nueva solucion es mejor que la obtenida hasta el momento
-                if(nuevo_costo < costoSolucion):                                   
+                if(nuevo_costo < costoSolucion):
                     self.__S = nueva_solucion
                     self.__rutas = nuevas_rutas
                     self.__beta = 1
@@ -276,7 +276,7 @@ class CVRP:
                     if(len(self.__optimosLocales) >= 20):
                         self.__optimosLocales.pop(0)
 
-                    self.almacenarOptimoLocal(nuevas_rutas,iterac,k_Opt)
+                    self.almacenarOptimoLocal(nuevas_rutas, iterac, k_Opt)
                     self.contarSwaps(k_Opt)
                     indOptimosLocales = -2
                     cond_Estancamiento = False
@@ -462,13 +462,14 @@ class CVRP:
             porcentaje*100,
             tiempo,
             json.dumps(s.swaps),
-            s.__tipoSolucionIni
+            s.__tipoSolucionIni,
+            s.criterioTenure
             )
         idResolucion = DB.insert_resolucion(self.conn, resolucion)
+        print("Id instancia: ", self.idInstancia)
         DB.insert_resolucionXInstancia(self.conn, (idResolucion, self.idInstancia))
         idSoluciones = []
         for i in range(len(self.__optimosLocales)):
-            t = time()
             costo = sum([c.getCostoAsociado() for c in self.__optimosLocales[i]])
             rutas = []
             for r in self.__optimosLocales[i]:
@@ -478,12 +479,13 @@ class CVRP:
                 json.dumps(rutas),
                 json.dumps(self.__swapOptimoLocal[i]),
                 self.__iteracionOptimoLocal[i],
-                )
+                json.dumps(self.__costosOptimosLocales[i])
+            )
             idSol = DB.insert_solucion(self.conn, S)
             idSoluciones.append(idSol)
-        
+
         for j in idSoluciones:
-            DB.insert_solucionXResolucion(self.conn, (idResolucion, j))
+            DB.insert_solucionXResolucion(self.conn, (idResolucion,j)) 
       
     def getPermitidos(self, Aristas, umbral, solucion):
         AristasNuevas = []
@@ -782,6 +784,8 @@ class CVRP:
         self.__optimosLocales.append(OL)
         self.__swapOptimoLocal.append(swap)
         self.__iteracionOptimoLocal.append(iteracion)
+        costos = [x.getCostoAsociado() for x in OL]
+        self.__costosOptimosLocales.append(costos)
 
     def eliminarOptimoLocal(self, indice):
         self.__optimosLocales.pop(indice)
