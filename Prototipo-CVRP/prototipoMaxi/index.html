@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View CVRP</title>
+
+    <!-- Carga Leaflet de CDN-->
+    <!-- -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css"
+    integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ=="
+    crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet-src.js"></script>
+
+    <!-- Cargando Esri Leaflet de CDN -->
+    <script src="https://unpkg.com/esri-leaflet@2.0.8"></script>
+
+    <!-- Carga Esri Leaflet Geocoder de CDN -->
+    <link rel="stylesheet" href="https://unpkg.com/esri-leaflet-geocoder@2.2.4/dist/esri-leaflet-geocoder.css">
+    <script src="https://unpkg.com/esri-leaflet-geocoder@2.2.4"></script>
+
+    <!-- Error favicon.ico-->
+    <link rel="shortcut icon" href="#">
+
+    <!-- Carga script para convertir a json-->
+    <script lang="javascript" src="xlsx.full.min.js"></script>
+    <!--<script src="conversorJSON.js"></script>-->
+
+</head>
+<body>
+    <h1>Problema de Enrutamiento de Vehículos para la ciudad de Salta</h1>
+    <div id="map" style="height: 500px"></div>
+    <script src="myMap.js"></script>
+</body>
+</html>

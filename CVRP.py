@@ -497,18 +497,29 @@ class CVRP:
         for EP in Aristas:
             pertS = False
             h = hash(EP)
+            hInverso = hash(EP.getAristaInvertida())
             try:
                 arista = dictA[h]
             except KeyError:
                 arista = None
-                
+
+            try:
+                aristaInv = dictA[hInverso]
+            except KeyError:
+                aristaInv = None 
+
             if arista is not None:
                 pertS = True
                 del dictA[h]
+
+            if aristaInv is not None:
+                pertS = True
+                del dictA[hInverso]
+
             if(not pertS and self.__umbralMin <= EP.getPeso() and EP.getPeso() <= umbral):
                 AristasNuevas.append(EP)
                 ind_permitidos = np.append(ind_permitidos, EP.getId())
-        ind_permitidos = np.unique(ind_permitidos)
+        #ind_permitidos = np.unique(ind_permitidos)
 
         return ind_permitidos
 

@@ -12,7 +12,6 @@ import numpy as np
 from clsTxt import clsTxt
 from time import time
 import datetime
-import DB
 import json
 
 class CVRP:
@@ -51,15 +50,8 @@ class CVRP:
         self.__txt.escribir(strText)
         
         #print("tiempo carga solucion: ", time()-tiempoIni)
-        self.c = None
-        if coord is not None:
-            self.coordenadas = coord
-        if idInstancia is not None:
-            self.idInstancia = idInstancia
-        self.conn = DB.DB()
         self.tabuSearch()
-        self.swaps = [0]*4
-
+        
     def getRutas(self):
         return self.__rutas
 
@@ -175,7 +167,7 @@ class CVRP:
         condPathRelinking = False
         condEstancPathRelinking = True
         condPeorSolucionNueva = False
-        auxCond = False
+        #auxCond = False
         
         #costoAux = None
         iteracEstancamientoPR = 0
@@ -490,41 +482,6 @@ class CVRP:
         # #self.datosParaDB(iterac,tiempoEjecuc)
         # print(f"tiempo en cargar en DB: {time()-t}")
 
-    def datosParaDB(self, iterac,tiempo):
-        s = self
-        optimoEncontrado = self.__S.getCostoAsociado()
-        porcentaje = optimoEncontrado/self.__optimo -1.0
-        resolucion = (
-            iterac,
-            optimoEncontrado,
-            s.__tenureADD,
-            s.__tenureDROP,
-            porcentaje*100,
-            tiempo,
-            json.dumps(s.swaps),
-            s.__tipoSolucionIni
-            )
-        idResolucion = DB.insert_resolucion(self.conn,resolucion)
-        DB.insert_resolucionXInstancia(self.conn,(idResolucion,self.idInstancia))
-        idSoluciones = []
-        for i in range(len(self.__optimosLocales)):
-            t = time()
-            costo = sum([c.getCostoAsociado() for c in self.__optimosLocales[i]])
-            rutas = []
-            for r in self.__optimosLocales[i]:
-                rutas.append(str(r.getV()))
-            S = (
-                costo,
-                json.dumps(rutas),
-                json.dumps(self.__swapOptimoLocal[i]),
-                self.__iteracionOptimoLocal[i],
-                )
-            idSol = DB.insert_solucion(self.conn, S)
-            idSoluciones.append(idSol)
-        
-        for j in idSoluciones:
-            DB.insert_solucionXResolucion(self.conn, (idResolucion,j))
-        
     def getPermitidos(self, Aristas, umbral, solucion):
         AristasNuevas = []
         ind_permitidos = np.array([], dtype = int)
@@ -556,16 +513,16 @@ class CVRP:
                 pertS = True
                 del dictA[hInverso]
 
-            # if(not pertS and self.__umbralMin <= EP.getPeso() and EP.getPeso() <= umbral and EP.getId() not in idListAristas):
+            if(not pertS and self.__umbralMin <= EP.getPeso() and EP.getPeso() <= umbral and EP.getId() not in idListAristas):
             # if not pertS and self.__umbralMin <= EP.getPeso() and EP.getPeso() <= umbral:
                 AristasNuevas.append(EP)
                 ind_permitidos = np.append(ind_permitidos, EP.getId())
         
-                for a in solucion.getA():
-                    if a == EP:
-                        print("Error")
-                        print(EP)
-                        print("Id_EP: ", EP.getId())
+                # for a in solucion.getA():
+                #     if a == EP:
+                #         print("Error")
+                #         print(EP)
+                #         print("Id_EP: ", EP.getId())
         
         # ind_permitidos = np.unique(ind_permitidos)
         
@@ -802,15 +759,3 @@ class CVRP:
         tiempoTotal = time()-tiempoEstancamiento
         self.__txt.escribir("Tiempo de estancamiento: "+str(int(tiempoTotal/60))+"min "+str(int(tiempoTotal%60))+"seg")
         self.__txt.imprimir()
-
-    def contarSwaps(self,k_Opt):
-        swap = k_Opt[0]
-        if(swap == 2):
-            self.swaps[0]+=1
-        elif(swap == 3):
-            self.swaps[1]+=1
-        elif(swap == 4):
-            self.swaps[2]+=1
-        elif(swap == 5):
-            self.swaps[3]+=1
-    

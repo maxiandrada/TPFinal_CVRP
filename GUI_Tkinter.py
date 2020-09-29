@@ -170,14 +170,16 @@ class Ventana(tk.Tk):
             self.__eTime[i].set(1.0)
         elif(int(len(self.__matrizDistancias[i])) < 150):
             self.__eTime[i].set(3.0)
-        else:
+        elif(int(len(self.__matrizDistancias[i])) < 300):
             self.__eTime[i].set(7.0)
+        else:
+            self.__eTime[i].set(15.0)
 
         self.__entryTiempoEjecucion[i].configure(state = "normal", textvariable = self.__eTime[i])
 
         #Porcentaje
         self.__entryPorcentaje[i].configure(state = "normal", textvariable = self.__ePorcentaje[i])
-        self.__ePorcentaje[i].set(0.1)
+        self.__ePorcentaje[i].set(0.01)
 
     def listToString(self, s): 
         str1 = ""  

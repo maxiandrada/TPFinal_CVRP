@@ -1,3 +1,11 @@
 {
+<<<<<<< HEAD
     "python.pythonPath": "C:\\Python38\\python.exe"
+=======
+<<<<<<< HEAD
+    "python.pythonPath": "C:\\Users\\Maxi\\miniconda3\\python.exe"
+=======
+    "python.pythonPath": "/usr/bin/python3"
+>>>>>>> a1cffc35ba90759319429cf3e7acb24f34676528
+>>>>>>> f3bcfd549840d0d2c10f09fe0acc393251f052b5
 }
