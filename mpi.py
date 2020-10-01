@@ -194,7 +194,6 @@ def ejecutaParalelismo(direccion, tiempo):
         tenureADD = int(len(matrizDist)**(1/2.0))
         tenureDROP = int(len(matrizDist)**(1/2.0))+1
         solucionInicial = 0
-        comm.Allgather(direccion, dir)
         cvrp = CVRPparalelo(
             matrizDist,
             demandas,
@@ -242,7 +241,7 @@ def ejecutaParalelismo(direccion, tiempo):
             nroVehiculos,
             capacidad,
             subcarpeta,
-            nombre[:-4]+"_nodo"+str(rank)+"_"+str(tiempo)+"min", 'mpi',
+            nombre[:-4]+"_nodo"+str(rank)+"_"+str(tiempo)+"min", 'paralelismo',
             solucionInicial, 
             tenureADD, 
             tenureDROP, 
@@ -261,6 +260,13 @@ try:
     tiempo = sys.argv[3]
 except IndexError:
     tiempo = None
+comm = MPI.COMM_WORLD
+rank = comm.Get_rank()
 for f in findAll(match, exc, os.getcwd()):
+    if rank == 0:
+        direccion = f
+    else:
+        direccion = None
+    direccion = comm.bcast(direccion, root = 0)
     print ("AHORA SE EJECUTARÁ LA INSTANCIA :\n"+f)
-    ejecutaParalelismo(f, tiempo)
+    ejecutaParalelismo(direccion, tiempo)
