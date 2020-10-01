@@ -195,7 +195,7 @@ def ejecutaSecuencial(direccion, tiempo):
                 nroVehiculos, 
                 capacidad, 
                 nombre+"_"+str(tiempo)+"min", 
-                'secuencial', 
+                'secuencial2', 
                 0, 
                 tenureADD, 
                 tenureDROP, 

@@ -194,6 +194,7 @@ def ejecutaParalelismo(direccion, tiempo):
         tenureADD = int(len(matrizDist)**(1/2.0))
         tenureDROP = int(len(matrizDist)**(1/2.0))+1
         solucionInicial = 0
+        comm.Allgather(direccion, dir)
         cvrp = CVRPparalelo(
             matrizDist,
             demandas,
@@ -214,7 +215,7 @@ def ejecutaParalelismo(direccion, tiempo):
         print("Se cargaron rutas iniciales en nodo root")
         dic = {'nroVehiculos':nroVehiculos, 'optimo':optimo, 'capacidad':capacidad, 'matrizDist':matrizDist, 'demandas':demandas, "solInicial": rutas, "subcarpeta": subcarpeta, "tiempo":tiempo}
         for r in range(1,size):
-            print(f"enviando datos a nodo {r} ")
+            print("enviando datos a nodo "+str(r))
             comm.send(dic,dest=r)
         
         cvrp.setRutasIniciales(rutas)

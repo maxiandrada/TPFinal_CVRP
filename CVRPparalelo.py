@@ -17,7 +17,7 @@ from mpi4py import MPI
 class CVRPparalelo:
     def __init__(self, M, D, nroV, capac, subcarpeta, archivo, carpeta, solI, tADD, tDROP, tiempo, porcentaje, optimo, rutasIniciales=None,rank=None):
         self.__comm = MPI.COMM_WORLD
-        self.__tiempoMPI = 0
+        self.__tMaxMPI = self.__tiempoMPI = 0
         self.__rank = self.__comm.Get_rank()
         self.__size = self.__comm.Get_size()
         self.__rankInd = self.__rank
@@ -202,7 +202,8 @@ class CVRPparalelo:
         
 
         cantIntercambios = int(self.__tiempoMaxEjec*5)
-        self.__tiempoMPI = tiempoMax / cantIntercambios
+        self.__tMaxMPI = self.__tiempoMPI = tiempoMax / cantIntercambios   #Para saber cada cuanto compartirán los nodos
+        
         tCoord = time()
         nroIntercambios = 0
         bandera = True #Bandera para forzar detención de ejecución de los nodos
@@ -222,13 +223,12 @@ class CVRPparalelo:
                 nroIntercambios, bandera, tCoord, encontro = self.__paralelismo(True, tCoord, nroIntercambios, bandera, encontro)
             if(cond_Optimiz):
                 ind_permitidos = self.getPermitidos(Aristas_Opt, self.__umbralMax, solucion_refer)    #Lista de elementos que no son tabu
-
                 self.__umbralMin = 0
             cond_Optimiz = False
             ADD = []
             DROP = []
 
-            nroIntercambios, bandera, tCoord, encontro = self.__paralelismo((time () - tCoord > self.__tiempoMPI), tCoord, nroIntercambios, bandera, encontro)
+            nroIntercambios, bandera, tCoord, encontro = self.__paralelismo((time () - tCoord > self.__tiempoMPI and tiempoEjecuc < tiempoMax-5.0), tCoord, nroIntercambios, bandera, encontro)
             
             ind_random = np.arange(0,len(ind_permitidos))
             random.shuffle(ind_random)
@@ -505,6 +505,9 @@ class CVRPparalelo:
                     self.__solPR.append(z[4])
             
             if encontro:
+                if self.__tiempoMPI > self.__tMaxMPI:
+                    self.__tiempoMPI -= 2.0
+                # Buscamos el mejor de todas las soluciones
                 smCosto = listaS[0]
                 for i in range(1,len(listaS)):
                     if(listaS[i][0].getCostoAsociado() < smCosto[0].getCostoAsociado()):
@@ -535,11 +538,14 @@ class CVRPparalelo:
                         else:
                             j+=1
                     i+=1
+                
                 for tupla in listaS:
                     self.__poolSol.append(tupla[2])
                 self.__poolSol.append(copy.deepcopy(self.__rutas))
                 while len(self.__poolSol) >= 15:
                     self.__poolSol.pop(0)
+            else:
+                self.__tiempoMPI += 2
             tCoord = time()
         return nroIntercambios, bandera, tCoord, aux_encontro
 
