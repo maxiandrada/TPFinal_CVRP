@@ -187,7 +187,7 @@ def ejecutaSecuencial(direccion, tiempo):
     nombre = os.path.basename(direccion)
     nroVehiculos, optimo, capacidad, matrizDist, demandas = cargarDesdeFile2(direccion)
     if tiempo == None:
-        tiempo = int(len(matrizDist)**0.5)
+        tiempo = int(len(matrizDist)**0.7)
     tenureADD = int(len(matrizDist)**(1/2.0))
     tenureDROP = int(len(matrizDist)**(1/2.0))+1
     cvrp = CVRP(matrizDist, 
