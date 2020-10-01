@@ -201,16 +201,16 @@ class CVRPparalelo:
         print("Costo sol Inicial: "+str(self.__S.getCostoAsociado())+"      ==> Optimo: "+str(self.__optimo)+"  Desvio: "+str(round(porcentaje*100,3))+"%")
         
 
-        cantIntercambios = int(self.__tiempoMaxEjec*4)
+        cantIntercambios = int(self.__tiempoMaxEjec*5)
         self.__tiempoMPI = tiempoMax / cantIntercambios
         tCoord = time()
         nroIntercambios = 0
         bandera = True #Bandera para forzar detención de ejecución de los nodos
         contEstanOpt = 0
-        cantMaxEstancOpt = 10
+        cantMaxEstancOpt = 20
         condEstancPathRelinking = True
         contPR = 0
-        maxPR = self.__S.getGrado()**0.3
+        maxPR = self.__S.getGrado()**0.4
         encontro = False
         # cantMaxPR = 7
         # cantPR = 0
@@ -357,7 +357,7 @@ class CVRPparalelo:
                     S = self.__optimosLocales[-1]
                 
                 nuevas_rutas = self.pathRelinking(S, G)
-                if nuevas_rutas == [] or contPR > maxPR:
+                if (nuevas_rutas == [] or contPR > maxPR) and len(self.__solPR) > 0:
                     contPR = 0
                     condEstancPathRelinking = True
                     contEstanOpt = 0

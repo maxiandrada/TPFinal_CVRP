@@ -200,7 +200,7 @@ def ejecutaParalelismo(direccion, tiempo):
             nroVehiculos,
             capacidad,
             subcarpeta,
-            nombre[:-4]+"_nodo"+str(rank)+"_"+str(tiempo)+"min", 'mpi',
+            nombre[:-4]+"_nodo"+str(rank)+"_"+str(tiempo)+"min", 'paralelismo',
             solucionInicial, 
             tenureADD, 
             tenureDROP, 

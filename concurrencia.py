@@ -194,5 +194,3 @@ for i in range(3):
 for i in range(3):
     process[i].join()
 
-# with contextlib.closing(Pool(processes= 3)) as pool:
-#     print (pool.map(solve, lista))

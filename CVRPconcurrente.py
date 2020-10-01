@@ -201,11 +201,6 @@ class CVRP:
             cond_Optimiz = False
             ADD = []
             DROP = []
-            
-            # CONCURRENCIA
-            if (time () - tCoord > self.__tiempoConcurrencia):
-                return self.__rutas
-
 
             ind_random = np.arange(0,len(ind_permitidos))
             random.shuffle(ind_random)
