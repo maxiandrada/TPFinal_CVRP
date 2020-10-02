@@ -285,7 +285,7 @@ class CVRP:
 
                 #if (not condPathRelinking and condEstancPathRelinking) or cond_Estancamiento:                    
                 if (not condPathRelinking and condEstancPathRelinking):
-                    S = copy.deepcopy(self.__optimosLocales[indOptimosLocales])
+                    S = copy.deepcopy(self.__optimosLocales[(-1)*indOptimosLocales - 1])
                     G = copy.deepcopy(self.__optimosLocales[indOptimosLocales+1])
                     
                     nuevas_rutas = self.__optimosLocales[indOptimosLocales]
