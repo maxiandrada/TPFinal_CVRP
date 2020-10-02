@@ -190,7 +190,7 @@ def ejecutaParalelismo(direccion, tiempo):
         subcarpeta = '%d-%d-%d_%d:%d:%d' % (timeObj.tm_mday, timeObj.tm_mon, timeObj.tm_year, timeObj.tm_hour, timeObj.tm_min, timeObj.tm_sec)
         nroVehiculos, optimo, capacidad, matrizDist, demandas = cargarDesdeFile2(direccion)
         if tiempo == None:
-            tiempo = int(len(matrizDist)**0.7)
+            tiempo = int(len(matrizDist)**0.5)
         tenureADD = int(len(matrizDist)**(1/2.0))
         tenureDROP = int(len(matrizDist)**(1/2.0))+1
         solucionInicial = 0
