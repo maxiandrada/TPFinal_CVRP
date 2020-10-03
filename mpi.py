@@ -200,7 +200,7 @@ def ejecutaParalelismo(direccion, tiempo):
             nroVehiculos,
             capacidad,
             subcarpeta,
-            nombre[:-4]+"_nodo"+str(rank)+"_"+str(tiempo)+"min", 'paralelismo',
+            nombre[:-4]+"_nodo"+str(rank)+"_"+str(tiempo)+"min", 'paralelismo2',
             solucionInicial, 
             tenureADD, 
             tenureDROP, 
@@ -241,7 +241,7 @@ def ejecutaParalelismo(direccion, tiempo):
             nroVehiculos,
             capacidad,
             subcarpeta,
-            nombre[:-4]+"_nodo"+str(rank)+"_"+str(tiempo)+"min", 'paralelismo',
+            nombre[:-4]+"_nodo"+str(rank)+"_"+str(tiempo)+"min", 'paralelismo2',
             solucionInicial, 
             tenureADD, 
             tenureDROP, 
@@ -262,7 +262,7 @@ except IndexError:
     tiempo = None
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
-for _ in range(4):
+for _ in range(2):
     for f in findAll(match, exc, os.getcwd()):
         if rank == 0:
             direccion = f

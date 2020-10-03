@@ -461,7 +461,7 @@ class CVRPparalelo:
                     self.__optimosLocales.pop(0)
                 self.__optimosLocales.append(nuevas_rutas)
                 if contSolPeor < 5:
-                    contSolpeor += 1
+                    contSolPeor += 1
                 else:
                     indPRP = 1
                     contSolPeor = 1
