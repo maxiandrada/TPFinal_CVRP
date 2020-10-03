@@ -187,7 +187,7 @@ def ejecutaSecuencial(direccion, tiempo):
     nombre = os.path.basename(direccion)
     nroVehiculos, optimo, capacidad, matrizDist, demandas = cargarDesdeFile2(direccion)
     if tiempo == None:
-        tiempo = int(len(matrizDist)**0.7)
+        tiempo = int(len(matrizDist)**0.5)
     tenureADD = int(len(matrizDist)**(1/2.0))
     tenureDROP = int(len(matrizDist)**(1/2.0))+1
     cvrp = CVRP(matrizDist, 
@@ -200,7 +200,7 @@ def ejecutaSecuencial(direccion, tiempo):
                 tenureADD, 
                 tenureDROP, 
                 tiempo, 
-                0, 
+                -10, 
                 optimo
                 )
     cvrp.tabuSearch()
@@ -214,6 +214,7 @@ try:
     tiempo = sys.argv[3]
 except IndexError:
     tiempo = None
-for f in findAll(match, exc, os.getcwd()):
-    print ("AHORA SE EJECUTARÁ LA INSTANCIA :\n"+f)
-    ejecutaSecuencial(f, tiempo)
+for _ in range(10):
+    for f in findAll(match, exc, os.getcwd()):
+        print ("AHORA SE EJECUTARÁ LA INSTANCIA :\n"+f)
+        ejecutaSecuencial(f, tiempo)
