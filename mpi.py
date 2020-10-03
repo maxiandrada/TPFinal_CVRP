@@ -262,11 +262,12 @@ except IndexError:
     tiempo = None
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
-for f in findAll(match, exc, os.getcwd()):
-    if rank == 0:
-        direccion = f
-    else:
-        direccion = None
-    direccion = comm.bcast(direccion, root = 0)
-    print ("AHORA SE EJECUTARÁ LA INSTANCIA :\n"+f)
-    ejecutaParalelismo(direccion, tiempo)
+for _ in range(4):
+    for f in findAll(match, exc, os.getcwd()):
+        if rank == 0:
+            direccion = f
+        else:
+            direccion = None
+        direccion = comm.bcast(direccion, root = 0)
+        print ("AHORA SE EJECUTARÁ LA INSTANCIA :\n"+f)
+        ejecutaParalelismo(direccion, tiempo)

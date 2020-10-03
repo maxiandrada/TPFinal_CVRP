@@ -219,6 +219,7 @@ class CVRPparalelo:
         contPR = 0
         maxPR = self.__S.getGrado()**0.4
         encontro = False
+        contSolPeor = 0
         # cantMaxPR = 7
         # cantPR = 0
 
@@ -459,7 +460,11 @@ class CVRPparalelo:
                 if(len(self.__optimosLocales) >= 20):
                     self.__optimosLocales.pop(0)
                 self.__optimosLocales.append(nuevas_rutas)
-                
+                if contSolPeor < 5:
+                    contSolpeor += 1
+                else:
+                    indPRP = 1
+                    contSolPeor = 1
                 nueva_solucion = self.cargaSolucion(nuevas_rutas)
                 tiempoTotal = time()-tiempoEstancamiento
                 costo = nueva_solucion.getCostoAsociado()
@@ -555,7 +560,9 @@ class CVRPparalelo:
             for z in listaS:
                 if not self.__rank == z[1]:
                     self.__solPR.append(z[4])
-            
+            while len(self.__solPR)>20:
+                self.__solPR.pop(0)
+
             if encontro:
                 if self.__tiempoMPI > self.__tMaxMPI:
                     self.__tiempoMPI -= 2.0
