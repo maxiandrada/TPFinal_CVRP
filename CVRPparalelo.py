@@ -465,6 +465,7 @@ class CVRPparalelo:
                 else:
                     indPRP = 1
                     contSolPeor = 1
+                    condPRParalelo = True
                 nueva_solucion = self.cargaSolucion(nuevas_rutas)
                 tiempoTotal = time()-tiempoEstancamiento
                 costo = nueva_solucion.getCostoAsociado()
