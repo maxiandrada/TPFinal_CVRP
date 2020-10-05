@@ -328,7 +328,7 @@ class CVRPparalelo:
                 # Aristas = Aristas_Opt
                 iteracEstancamiento = 1
                 iteracEstancMax = 100
-                self.__beta = 2
+                self.__beta = 3
                 # contEstanOpt += 1
             
             #Si se estancó con la sol anterior y el Beta incrementado, aplicamos Path Relinking

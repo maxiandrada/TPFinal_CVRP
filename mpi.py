@@ -262,7 +262,7 @@ except IndexError:
     tiempo = None
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
-for _ in range(2):
+for _ in range(5):
     for f in findAll(match, exc, os.getcwd()):
         if rank == 0:
             direccion = f
